@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkigeo7_website=globalThis.webpackChunkigeo7_website||[]).push([[8644],{8644(e,i,s){s.d(i,{createArchitectureServices:()=>c.S});var c=s(5877);s(6902)}}]);

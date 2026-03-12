@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkigeo7_website=globalThis.webpackChunkigeo7_website||[]).push([[5187],{5187(e,i,s){s.d(i,{createTreemapServices:()=>a.d});var a=s(1592);s(6902)}}]);
