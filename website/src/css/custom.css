@@ -1,0 +1,141 @@
+/**
+ * IGEO7 custom theme — earth tones with forest green primary.
+ */
+
+:root {
+  --ifm-color-primary: #2e7d32;
+  --ifm-color-primary-dark: #256427;
+  --ifm-color-primary-darker: #1b5e20;
+  --ifm-color-primary-darkest: #0d3b13;
+  --ifm-color-primary-light: #43a047;
+  --ifm-color-primary-lighter: #66bb6a;
+  --ifm-color-primary-lightest: #a5d6a7;
+
+  --ifm-code-font-size: 95%;
+  --ifm-font-family-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --igeo7-hero-bg: #f0f7f0;
+  --igeo7-hero-border: #c8e6c9;
+  --igeo7-feature-icon-bg: #e8f5e9;
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #66bb6a;
+  --ifm-color-primary-dark: #4caf50;
+  --ifm-color-primary-darker: #43a047;
+  --ifm-color-primary-darkest: #2e7d32;
+  --ifm-color-primary-light: #81c784;
+  --ifm-color-primary-lighter: #a5d6a7;
+  --ifm-color-primary-lightest: #c8e6c9;
+
+  --igeo7-hero-bg: #1a2e1a;
+  --igeo7-hero-border: #2e7d32;
+  --igeo7-feature-icon-bg: #1b3a1b;
+}
+
+/* ── Hero section ─────────────────────────────────────────── */
+
+.hero--igeo7 {
+  background: var(--igeo7-hero-bg);
+  border-bottom: 2px solid var(--igeo7-hero-border);
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.hero--igeo7 .hero__title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .hero--igeo7 .hero__title {
+  color: var(--ifm-color-primary-lightest);
+}
+
+.hero--igeo7 .hero__subtitle {
+  font-size: 1.25rem;
+  max-width: 640px;
+  margin: 1rem auto 2rem;
+  color: var(--ifm-color-content-secondary);
+}
+
+.hero__cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--ifm-color-primary);
+  color: #fff;
+  border-radius: 2rem;
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0.25rem;
+}
+
+/* ── Feature cards ────────────────────────────────────────── */
+
+.features {
+  padding: 3rem 0;
+}
+
+.featureSvg {
+  height: 100px;
+  width: 100px;
+}
+
+.featureIconWrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.featureIconBg {
+  background: var(--igeo7-feature-icon-bg);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Resolution table tweaks ──────────────────────────────── */
+
+.resolution-table td,
+.resolution-table th {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.resolution-table th:first-child,
+.resolution-table td:first-child {
+  text-align: center;
+}
+
+/* ── Code blocks ──────────────────────────────────────────── */
+
+.docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+[data-theme="dark"] .docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Admonitions ──────────────────────────────────────────── */
+
+.alert--secondary {
+  --ifm-alert-border-color: var(--ifm-color-primary);
+}

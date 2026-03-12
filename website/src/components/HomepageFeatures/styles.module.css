@@ -1,0 +1,23 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+  width: 100%;
+  background: var(--ifm-background-surface-color);
+}
+
+.featureIconBg {
+  background: var(--igeo7-feature-icon-bg, #e8f5e9);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.featureIcon {
+  font-size: 2.2rem;
+  line-height: 1;
+}

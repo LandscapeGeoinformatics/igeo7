@@ -1,0 +1,91 @@
+.heroBanner {
+  padding: 4rem 1rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroLogo {
+  margin: 0 auto 1.5rem;
+}
+
+.heroLogo img {
+  filter: drop-shadow(0 2px 8px rgba(46, 125, 50, 0.3));
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.badge {
+  background: rgba(46, 125, 50, 0.12);
+  border: 1px solid var(--ifm-color-primary-lighter);
+  color: var(--ifm-color-primary-darker);
+  border-radius: 2rem;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge {
+  background: rgba(102, 187, 106, 0.12);
+  border-color: var(--ifm-color-primary-dark);
+  color: var(--ifm-color-primary-lighter);
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+/* Stats strip */
+.statsSection {
+  padding: 3rem 0;
+  background: var(--ifm-background-color);
+  border-top: 1px solid var(--ifm-toc-border-color);
+}
+
+.statsRow {
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.statCard {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.statValue {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  color: var(--ifm-color-content-secondary);
+  margin-top: 0.4rem;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem 1rem;
+  }
+
+  .statCard {
+    padding: 1rem 0.5rem;
+  }
+
+  .statValue {
+    font-size: 1.8rem;
+  }
+}
