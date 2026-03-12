@@ -12,8 +12,8 @@ const config = {
   url: "https://igeo7.org",
   baseUrl: "/",
 
-  organizationName: "allixender",
-  projectName: "igeo7.github.io",
+  organizationName: "LandscapeGeoinformatics",
+  projectName: "igeo7",
   trailingSlash: false,
 
   onBrokenLinks: "throw",
@@ -38,7 +38,7 @@ const config = {
         docs: {
           sidebarPath: "./sidebars.js",
           editUrl:
-            "https://github.com/allixender/igeo7.github.io/edit/main/website/",
+            "https://github.com/LandscapeGeoinformatics/igeo7/edit/main/website/",
           remarkPlugins: [remarkMath],
           rehypePlugins: [rehypeKatex],
         },
@@ -101,7 +101,7 @@ const config = {
             position: "left",
           },
           {
-            href: "https://github.com/allixender/igeo7.github.io",
+            href: "https://github.com/LandscapeGeoinformatics/igeo7",
             label: "GitHub",
             position: "right",
           },
@@ -133,11 +133,15 @@ const config = {
               },
               {
                 label: "pydggsapi",
-                href: "https://github.com/allixender/pydggsapi",
+                href: "https://github.com/LandscapeGeoinformatics/pydggsapi",
               },
               {
                 label: "DGGAL",
-                href: "https://github.com/ecere/dggal",
+                href: "https://dggal.org",
+              },
+              {
+                label: "GeoPlegma",
+                href: "https://github.com/geoplegma/geoplegma",
               },
             ],
           },
@@ -149,17 +153,13 @@ const config = {
                 href: "https://doi.org/10.5194/agile-giss-6-32-2025",
               },
               {
-                label: "University of Tartu",
-                href: "https://www.ut.ee/en",
-              },
-              {
-                label: "Geolynx",
-                href: "https://geolynx.ee",
+                label: "Landscape Geoinformatics Lab",
+                href: "https://landscape-geoinformatics.ut.ee/",
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Alexander Kmoch, Kevin Sahr, Wai Tik Chan, Evelyn Uuemaa. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Landscape Geoinformatics Lab, University of Tartu, Estonia. Built with Docusaurus.`,
       },
 
       prism: {
