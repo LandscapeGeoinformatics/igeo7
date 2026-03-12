@@ -1,6 +1,7 @@
 ---
 id: aggregation
 title: Aggregation
+draft: true
 ---
 
 # Aggregation

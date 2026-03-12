@@ -1,6 +1,7 @@
 ---
 id: indexing
 title: Z7 Indexing Highlights
+draft: true
 ---
 
 # Z7 Indexing Highlights

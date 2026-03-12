@@ -1,6 +1,7 @@
 ---
 id: resolutions
 title: Resolutions
+draft: true
 ---
 
 # Resolutions

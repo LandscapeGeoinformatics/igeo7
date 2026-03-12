@@ -1,6 +1,7 @@
 ---
 id: icosahedron
 title: The Icosahedron
+draft: true
 ---
 
 # The Icosahedron

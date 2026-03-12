@@ -1,6 +1,7 @@
 ---
 id: pentagons
 title: Pentagons
+draft: true
 ---
 
 # Pentagons

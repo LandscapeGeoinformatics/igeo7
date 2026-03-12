@@ -1,6 +1,7 @@
 ---
 id: other-dggs
 title: Other DGGS
+draft: true
 ---
 
 # Other DGGS

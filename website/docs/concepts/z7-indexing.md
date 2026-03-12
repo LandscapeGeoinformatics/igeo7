@@ -131,5 +131,4 @@ Finding neighbours requires Z7 arithmetic — specifically, Central Place Indexi
 
 - [Z7 Bit Layout](../reference/z7-bit-layout) — detailed binary encoding
 - [Z7 String Format](../reference/z7-string-format) — the two external string representations
-- [Aperture 7 Hierarchy](./aperture7) — the subdivision geometry
-- [Pentagons](./pentagons) — the 12 special cells
+- [DGGS Fundamentals](./dggs-fundamentals) — icosahedron, hexagons, and pentagons explained
