@@ -222,3 +222,4 @@ yarn-error.log*
 website/build/
 website/.docusaurus/
 .docusaurus/
+.DS_Store
