@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGEO7 Experiment Preview</title>
+    <style id="theme-variables">
+        /* Default placeholders, will be overridden by JS */
+        :root {
+            --primary: #2e7d32;
+            --primary-darker: #1b5e20;
+            --hero-bg: #f0f7f0;
+            --hero-border: #c8e6c9;
+            --feature-icon-bg: #e8f5e9;
+            --text-color: #1c1e21;
+            --bg-color: #ffffff;
+        }
+    </style>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            line-height: 1.5;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+
+        header {
+            background: var(--hero-bg);
+            border-bottom: 2px solid var(--hero-border);
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-darker);
+            margin: 1rem 0;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 2rem;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .section { margin: 4rem 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
+
+        .card {
+            background: var(--bg-color);
+            border: 1px solid var(--hero-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .icon-box {
+            width: 64px;
+            height: 64px;
+            background: var(--feature-icon-bg);
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* Experiment Metadata overlay */
+        #exp-info {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            max-width: 300px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="hero">
+        <div class="logo-preview">
+            <svg id="main-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="80" height="80">
+                <polygon id="logo-hex" points="50,8 88,29 88,71 50,92 12,71 12,29" fill="var(--primary)" stroke="var(--primary-darker)" stroke-width="2" />
+                <polygon id="logo-inner" points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="white" stroke-width="1.5" opacity="0.6" />
+                <text x="50" y="60" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="800" fill="white">i7</text>
+            </svg>
+        </div>
+        <h1 class="hero-title" id="display-name">IGEO7 Experiment</h1>
+        <p id="display-desc">This is a preview of a style experiment.</p>
+        <a href="#" class="btn">Explore Docs</a>
+    </header>
+
+    <div class="container">
+        <div class="section">
+            <h2>Feature Grid Preview</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="icon-box">⬡</div>
+                    <h3>Equal Area</h3>
+                    <p>Mathematical consistency across the globe.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">🔢</div>
+                    <h3>Z7 Index</h3>
+                    <p>Hierarchical 64-bit integer addressing.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">🌍</div>
+                    <h3>Global</h3>
+                    <p>Seamless coverage of the entire sphere.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="exp-info">
+        <strong>Experiment ID:</strong> <span id="info-id">none</span><br>
+        <strong>Mode:</strong> <span id="info-mode">none</span>
+    </div>
+
+    <script>
+        // In a real usage, we would load the ID from the URL or a specific file
+        // For testing, we look for 'themes.json' and a URL param ?id=...
+        async function loadExperiment() {
+            const params = new URLSearchParams(window.location.search);
+            const expId = params.get('id') || 'current-light';
+
+            try {
+                const response = await fetch('themes.json');
+                const themes = await response.json();
+                const config = themes[expId];
+
+                if (!config) {
+                    console.error("Experiment not found:", expId);
+                    return;
+                }
+
+                // Apply palette to CSS variables
+                const root = document.documentElement;
+                for (const [key, value] of Object.entries(config.palette)) {
+                    root.style.setProperty(`--${key.replace(/_/g, '-')}`, value);
+                }
+
+                // Update text
+                document.getElementById('display-name').textContent = config.name;
+                document.getElementById('display-desc').textContent = config.description;
+                document.getElementById('info-id').textContent = config.id;
+                document.getElementById('info-mode').textContent = config.mode;
+
+                // Adjust body for dark mode
+                if (config.mode === 'dark') {
+                    root.style.setProperty('--bg-color', '#1b1b1d');
+                    root.style.setProperty('--text-color', '#f5f6f7');
+                } else {
+                    root.style.setProperty('--bg-color', '#ffffff');
+                    root.style.setProperty('--text-color', '#1c1e21');
+                }
+
+                // Apply Logo colors if specified
+                if (config.logo) {
+                    if (config.logo.fill_color) document.getElementById('logo-hex').setAttribute('fill', config.logo.fill_color);
+                    if (config.logo.stroke_color) document.getElementById('logo-hex').setAttribute('stroke', config.logo.stroke_color);
+                    if (config.logo.inner_stroke) document.getElementById('logo-inner').setAttribute('stroke', config.logo.inner_stroke);
+                }
+
+            } catch (e) {
+                console.error("Failed to load themes.json", e);
+            }
+        }
+
+        loadExperiment();
+    </script>
+</body>
+</html>

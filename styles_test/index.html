@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGEO7 Style Reference</title>
+    <style>
+        :root {
+            /* Light Mode Palette */
+            --primary: #2e7d32;
+            --primary-dark: #256427;
+            --primary-darker: #1b5e20;
+            --primary-darkest: #0d3b13;
+            --primary-light: #43a047;
+            --primary-lighter: #66bb6a;
+            --primary-lightest: #a5d6a7;
+            --hero-bg: #f0f7f0;
+            --hero-border: #c8e6c9;
+            --feature-icon-bg: #e8f5e9;
+            --text-color: #1c1e21;
+            --bg-color: #ffffff;
+
+            /* Dark Mode Palette Reference */
+            --dark-primary: #66bb6a;
+            --dark-primary-dark: #4caf50;
+            --dark-primary-darker: #43a047;
+            --dark-primary-darkest: #2e7d32;
+            --dark-primary-light: #81c784;
+            --dark-primary-lighter: #a5d6a7;
+            --dark-primary-lightest: #c8e6c9;
+            --dark-hero-bg: #1a2e1a;
+            --dark-hero-border: #2e7d32;
+            --dark-feature-icon-bg: #1b3a1b;
+            --dark-text-color: #f5f6f7;
+            --dark-bg-color: #1b1b1d;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            color: var(--text-color);
+            background-color: #f8f9fa;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-text h1 { margin: 0; color: var(--primary-darkest); }
+        .header-text p { margin: 0.5rem 0 0; color: #666; }
+
+        h2 { margin-top: 3rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; color: var(--primary-darker); }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .color-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background: white;
+            transition: transform 0.2s;
+        }
+
+        .color-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .color-swatch {
+            height: 120px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            font-family: monospace;
+        }
+
+        .color-info {
+            padding: 1rem;
+        }
+
+        .color-name {
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .color-hex {
+            font-family: monospace;
+            color: #666;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        /* Logos Section */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .asset-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .asset-card.dark-bg {
+            background: var(--dark-bg-color);
+            color: white;
+        }
+
+        .logo-container {
+            margin-bottom: 1rem;
+        }
+
+        .logo-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+
+        /* Dark Section Wrapper */
+        .dark-mode-preview {
+            background-color: var(--dark-bg-color);
+            color: var(--dark-text-color);
+            padding: 3rem;
+            margin: 3rem -2rem -2rem -2rem;
+            border-radius: 24px 24px 0 0;
+        }
+
+        .dark-mode-preview h2 {
+            color: var(--dark-primary-lightest);
+            border-bottom-color: #444;
+        }
+
+        .dark-mode-preview .color-card {
+            background: #242526;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .dark-mode-preview .color-hex {
+            color: #aaa;
+        }
+
+        .ui-preview {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .dark-mode-preview .btn-primary { background-color: var(--dark-primary); color: #1b1b1d; }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: var(--hero-bg);
+            border: 1px solid var(--hero-border);
+            color: var(--primary-darker);
+        }
+
+        .dark-mode-preview .badge {
+            background: var(--dark-feature-icon-bg);
+            border-color: var(--dark-primary-dark);
+            color: var(--dark-primary-lightest);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-text">
+                <h1>IGEO7 Visual Identity</h1>
+                <p>Logos and color specifications from the official documentation site.</p>
+            </div>
+            <div style="width: 60px; height: 60px;">
+                <svg viewBox="0 0 100 100">
+                    <polygon points="50,8 88,29 88,71 50,92 12,71 12,29" fill="#2e7d32" />
+                    <text x="50" y="60" text-anchor="middle" font-family="sans-serif" font-size="32" font-weight="800" fill="#ffffff">i7</text>
+                </svg>
+            </div>
+        </header>
+
+        <h2>Brand Assets</h2>
+        <div class="asset-grid">
+            <div class="asset-card">
+                <div class="logo-container">
+                    <!-- Embedded igeo7-logo.svg -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120">
+                        <polygon points="50,8 88,29 88,71 50,92 12,71 12,29" fill="#2e7d32" stroke="#1b5e20" stroke-width="2" />
+                        <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="#a5d6a7" stroke-width="1.5" opacity="0.6" />
+                        <text x="50" y="60" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" font-weight="800" fill="#ffffff" letter-spacing="-1">i7</text>
+                    </svg>
+                </div>
+                <div class="logo-label">igeo7-logo.svg</div>
+            </div>
+            <div class="asset-card dark-bg">
+                <div class="logo-container">
+                    <!-- Embedded igeo7-logo-dark.svg -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120">
+                        <polygon points="50,8 88,29 88,71 50,92 12,71 12,29" fill="#43a047" stroke="#66bb6a" stroke-width="2" />
+                        <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="#c8e6c9" stroke-width="1.5" opacity="0.6" />
+                        <text x="50" y="60" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" font-weight="800" fill="#ffffff" letter-spacing="-1">i7</text>
+                    </svg>
+                </div>
+                <div class="logo-label">igeo7-logo-dark.svg</div>
+            </div>
+        </div>
+
+        <h2>Primary Palette (Light Mode)</h2>
+        <div class="palette-grid">
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary);">#2E7D32</div>
+                <div class="color-info"><span class="color-name">Primary</span><span class="color-hex">#2e7d32</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-dark);">#256427</div>
+                <div class="color-info"><span class="color-name">Dark</span><span class="color-hex">#256427</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-darker);">#1B5E20</div>
+                <div class="color-info"><span class="color-name">Darker</span><span class="color-hex">#1b5e20</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-darkest);">#0D3B13</div>
+                <div class="color-info"><span class="color-name">Darkest</span><span class="color-hex">#0d3b13</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-light);">#43A047</div>
+                <div class="color-info"><span class="color-name">Light</span><span class="color-hex">#43a047</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-lighter);">#66BB6A</div>
+                <div class="color-info"><span class="color-name">Lighter</span><span class="color-hex">#66bb6a</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--primary-lightest);">#A5D6A7</div>
+                <div class="color-info"><span class="color-name">Lightest</span><span class="color-hex">#a5d6a7</span></div>
+            </div>
+        </div>
+
+        <h2>Accent & Surface Colors</h2>
+        <div class="palette-grid">
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--hero-bg); color: var(--primary-darkest); border-bottom: 1px solid var(--hero-border);">#F0F7F0</div>
+                <div class="color-info"><span class="color-name">Hero Background</span><span class="color-hex">#f0f7f0</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--hero-border);">#C8E6C9</div>
+                <div class="color-info"><span class="color-name">Hero Border</span><span class="color-hex">#c8e6c9</span></div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: var(--feature-icon-bg);">#E8F5E9</div>
+                <div class="color-info"><span class="color-name">Feature Icon BG</span><span class="color-hex">#e8f5e9</span></div>
+            </div>
+        </div>
+
+        <div class="ui-preview">
+            <span class="btn btn-primary">Primary Button</span>
+            <span class="badge">Aperture 7</span>
+            <span class="badge">Equal Area</span>
+        </div>
+
+        <div class="dark-mode-preview">
+            <h2>Dark Mode Palette</h2>
+            <div class="palette-grid">
+                <div class="color-card">
+                    <div class="color-swatch" style="background-color: var(--dark-primary); color: #1b1b1d;">#66BB6A</div>
+                    <div class="color-info"><span class="color-name">Primary (Dark)</span><span class="color-hex">#66bb6a</span></div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background-color: var(--dark-primary-dark);">#4CAF50</div>
+                    <div class="color-info"><span class="color-name">Dark</span><span class="color-hex">#4caf50</span></div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background-color: var(--dark-hero-bg);">#1A2E1A</div>
+                    <div class="color-info"><span class="color-name">Hero BG</span><span class="color-hex">#1a2e1a</span></div>
+                </div>
+                <div class="color-card">
+                    <div class="color-swatch" style="background-color: var(--dark-feature-icon-bg);">#1B3A1B</div>
+                    <div class="color-info"><span class="color-name">Icon BG</span><span class="color-hex">#1b3a1b</span></div>
+                </div>
+            </div>
+
+            <div class="ui-preview">
+                <span class="btn btn-primary">Primary Button</span>
+                <span class="badge">Aperture 7</span>
+                <span class="badge">Equal Area</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

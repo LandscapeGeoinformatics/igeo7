@@ -1,0 +1,48 @@
+{
+  "current-light": {
+    "id": "current-light",
+    "name": "Default Light",
+    "description": "The current official light mode theme with forest green accents.",
+    "mode": "light",
+    "palette": {
+      "primary": "#2e7d32",
+      "primary_dark": "#256427",
+      "primary_darker": "#1b5e20",
+      "primary_darkest": "#0d3b13",
+      "primary_light": "#43a047",
+      "primary_lighter": "#66bb6a",
+      "primary_lightest": "#a5d6a7",
+      "hero_bg": "#f0f7f0",
+      "hero_border": "#c8e6c9",
+      "feature_icon_bg": "#e8f5e9"
+    },
+    "logo": {
+      "fill_color": "#2e7d32",
+      "stroke_color": "#1b5e20",
+      "inner_stroke": "#a5d6a7"
+    }
+  },
+  "current-dark": {
+    "id": "current-dark",
+    "name": "Default Dark",
+    "description": "The current official dark mode theme optimized for OLED and low-light.",
+    "mode": "dark",
+    "palette": {
+      "primary": "#66bb6a",
+      "primary_dark": "#4caf50",
+      "primary_darker": "#43a047",
+      "primary_darkest": "#2e7d32",
+      "primary_light": "#81c784",
+      "primary_lighter": "#a5d6a7",
+      "primary_lightest": "#c8e6c9",
+      "hero_bg": "#1a2e1a",
+      "hero_border": "#2e7d32",
+      "feature_icon_bg": "#1b3a1b"
+    },
+    "logo": {
+      "fill_color": "#43a047",
+      "stroke_color": "#66bb6a",
+      "inner_stroke": "#c8e6c9"
+    }
+  }
+}
