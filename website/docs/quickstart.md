@@ -8,6 +8,10 @@ title: Quickstart
 
 From zero to working IGEO7 cells in Python using **dggrid4py**.
 
+TODO:
+- Apply authalic conversion in dggrid4py
+- Provide parameter 11.2 
+
 ## Setup
 
 ```python

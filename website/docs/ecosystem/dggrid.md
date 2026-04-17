@@ -41,6 +41,7 @@ A minimal metafile for generating IGEO7 cells looks like:
 ```
 dggrid_operation  GENERATE_GRID
 dggs_type         IGEO7
+dggs_vert0_lon     11.20
 dggs_res_spec     9
 clip_subset_type  WHOLE_EARTH
 cell_output_type  GEOJSON
@@ -62,7 +63,7 @@ DGGRID supports two names for the same underlying grid:
 | `IGEO7` | Z7 / Z7_STRING | Recommended; uses Z7 indexing natively |
 | `ISEA7H` | SEQNUM, Q2DI, etc. | Same grid; older addressing schemes |
 
-Always use `IGEO7` with `output_address_type="Z7_STRING"` for new work.
+Always use `IGEO7` with `output_address_type="Z7_STRING"` for new work (`HIERNDX` required from latest DGRID).
 
 ## ISEA Orientation
 
@@ -74,7 +75,20 @@ dggs_vert0_lat     58.2825255885
 dggs_vert0_azimuth  0.0
 ```
 
-This is the default and does not need to be specified explicitly when using dggrid4py.
+This is the default, but `dggs_vert0_lon     11.20` needs to be specified explicitly when using dggrid4py:
+
+```
+dggs_vert0_lon     11.20
+dggs_vert0_lat     58.2825255885
+dggs_vert0_azimuth  0.0
+```
+
+
+## TODO Authalic conversion
+
+dggrid4py (and Julia DggridRunner) has functions to translate/convert between the default spherical coordinates of DGGRID and now widely adopted ellipsoidal DGGS coordinates.
+
+DGGAL does that authomatically for its ISEA7H_Z7 grid adaptation of IGEO7.
 
 ## Further Reading
 

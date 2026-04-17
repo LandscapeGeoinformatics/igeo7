@@ -6,7 +6,7 @@ title: Installation
 
 # Installation
 
-IGEO7 is implemented in **DGGRID** (the core C++ engine) and accessed via the **dggrid4py** Python wrapper. You need both.
+IGEO7 is implemented in **DGGRID** (the core C++ engine) and accessed via the **dggrid4py** Python wrapper.
 
 ## 1. Install DGGRID
 
@@ -15,6 +15,19 @@ DGGRID is a C++ command-line tool. You need a compiled binary on your system.
 ### Pre-built binaries
 
 Download a pre-built binary from the [DGGRID releases page](https://github.com/sahrk/DGGRID/releases).
+
+### With conda / mamba (or even Julia)
+
+or install from conda-forge (via Pixi or micomamba)
+
+```bash
+conda install -c conda-forge dggrid
+```
+
+```julia
+using Pkg; Pkg.add("DggridRunners")
+```
+
 
 ### Build from source
 
@@ -37,7 +50,7 @@ dggrid --version
 
 ### Setting the path
 
-dggrid4py locates the DGGRID binary via the `DGGRID_PATH` environment variable or an explicit path in the API call:
+dggrid4py requires the DGGRID binary via the `DGGRID_PATH` environment variable or an explicit path in the API call:
 
 ```bash
 export DGGRID_PATH=/usr/local/bin/dggrid
@@ -47,17 +60,12 @@ export DGGRID_PATH=/usr/local/bin/dggrid
 
 dggrid4py is the Python wrapper that drives DGGRID programmatically.
 
-### With pip
+### With pip (or uv or pixi)
 
 ```bash
 pip install dggrid4py
 ```
 
-### With conda / mamba
-
-```bash
-conda install -c conda-forge dggrid4py
-```
 
 ### Dependencies
 
@@ -82,7 +90,7 @@ pip install dggal
 
 ```python
 import os
-from dggrid4py import DGGRIDv7
+from dggrid4py import DGGRIDv8
 
 dggrid = DGGRIDv7(
     executable=os.environ.get("DGGRID_PATH", "/usr/local/bin/dggrid"),

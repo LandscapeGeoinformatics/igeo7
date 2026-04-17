@@ -1,12 +1,12 @@
 ---
 id: restable
 sidebar_position: 1
-title: Resolution Table
+title: Refinement Level Table
 ---
 
 # Resolution Table
 
-IGEO7 has **21 resolution levels** (0–20). At every resolution, the grid contains exactly **12 pentagons** (at icosahedron vertices) and all remaining cells are hexagons.
+IGEO7 has **21 resolution levels** (0–20). At every refinement level, the grid contains exactly **12 pentagons** (at icosahedron vertices) and all remaining cells are hexagons. Level 0 is only the 12 base pentagons.
 
 **CLS** (Characteristic Length Scale) is the diameter of a circle with the same area as a cell — the most intuitive way to relate IGEO7 resolutions to traditional raster pixel sizes.
 
@@ -100,6 +100,7 @@ dggrid = DGGRIDv7(
     silent=True,
 )
 
-df = dggrid.grid_stats_table("IGEO7", 20)
+# yes, ISEA7H, IGEO7 is not recognized as a grid for resolutions in itself :-)
+df = dggrid.grid_stats_table("ISEA7H", 20)
 print(df.to_string())
 ```

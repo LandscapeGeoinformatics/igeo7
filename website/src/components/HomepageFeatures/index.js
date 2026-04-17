@@ -8,9 +8,9 @@ const FeatureList = [
     icon: "⬡",
     description: (
       <>
-        Every cell has the same area at each resolution — guaranteed by the ISEA
+        Every cell has the same area at each resolution, based on the ISEA
         (Icosahedral Snyder Equal Area) projection. No ±50% distortions like in
-        gnomonic-based systems.
+        H3, S2, GeoHash, or Mercator-based systems.
       </>
     ),
   },
@@ -20,7 +20,7 @@ const FeatureList = [
     description: (
       <>
         A single 64-bit integer encodes resolution, base cell, and full
-        hierarchical path. Parent–child relationships are simple bit operations.
+        hierarchical path. Parent-child relationships are simple bit operations.
         Compatible with H3-style workflows.
       </>
     ),
