@@ -20,7 +20,7 @@ With H3's gnomonic projection, cells near icosahedral face edges are up to **50%
 
 | System | Projection | Cell area variation |
 |---|---|:---:|
-| **IGEO7** | ISEA (equal area) | **<0.1%** |
+| **IGEO7** | ISEA (equal area) | **&lt;0.1%** |
 | H3 | Gnomonic | up to ±50% |
 | S2 | Cube face projection | up to ±50% |
 

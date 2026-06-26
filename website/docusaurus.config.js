@@ -30,6 +30,31 @@ const config = {
 
   themes: ["@docusaurus/theme-mermaid"],
 
+  plugins: [
+    // webdggrid ships an emscripten loader whose dead `new URL("libdggrid.wasm",
+    // import.meta.url)` fallback branch makes webpack 5 try to resolve a .wasm
+    // asset that isn't shipped (the wasm is embedded in the JS). The runtime uses
+    // the embedded binary, so we disable URL-asset parsing for that one module.
+    function webdggridWasmPlugin() {
+      return {
+        name: "webdggrid-wasm",
+        configureWebpack() {
+          return {
+            // Disable webpack's `new URL(asset, import.meta.url)` asset emission
+            // (the embedded-wasm runtime never takes that branch), and alias the
+            // phantom asset to a harmless empty module as a fallback.
+            module: {
+              parser: { javascript: { url: false } },
+            },
+            resolve: {
+              alias: { "libdggrid.wasm": false },
+            },
+          };
+        },
+      };
+    },
+  ],
+
   presets: [
     [
       "classic",
@@ -84,6 +109,11 @@ const config = {
             sidebarId: "docsSidebar",
             position: "left",
             label: "About",
+          },
+          {
+            to: "/explore",
+            label: "Explore",
+            position: "left",
           },
           {
             to: "/docs/api/overview",
