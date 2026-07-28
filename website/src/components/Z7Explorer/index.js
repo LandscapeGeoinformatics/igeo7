@@ -7,9 +7,9 @@ import styles from "./styles.module.css";
 
 // IGEO7 = DGGRID ISEA aperture-7, Snyder vert0 latitude, icosahedron orientation
 // longitude 11.2° (NOT the DGGRID default 11.25°). Authalic latitude conversion
-// is mandatory and applied to the input latitude before every geo→cell call.
+// is mandatory and applied to the input latitude before every geo->cell call.
 // Verified against the lab's pydggal golden table: Lisbon (38.7223,-9.1393) res5
-// → 0064156, matching at every resolution for all non-degenerate points.
+// -> 0064156, matching at every resolution for all non-degenerate points.
 const IGEO7 = {
   poleCoordinates: { lat: 58.28252559, lng: 11.2 },
   azimuth: 0,
@@ -46,6 +46,20 @@ function basemapStyle(dark) {
 const EMPTY = { type: "FeatureCollection", features: [] };
 const hexOf = (z7) => "0x" + z7.toString(16).toUpperCase().padStart(16, "0");
 
+// The authalic conversion is a round trip, and both halves are mandatory.
+// geoToSequenceNum expects an *authalic* latitude, so every geo->cell call goes
+// through igeo7GeoToAuthalic. Symmetrically, sequenceNumToGeo *returns* an
+// authalic latitude, so every cell->geo result must come back through
+// igeo7AuthalicToGeo before it is displayed, echoed into the lat/lon inputs,
+// compared against map bounds, or fed back into a geo->cell call. Skipping the
+// inverse offsets the latitude by up to ~0.13° (~14 km at mid-latitudes) and,
+// because the raw value re-enters geoToSequenceNum on a resolution change, can
+// resolve to a neighbouring cell once the cell is smaller than that error.
+function geoOf(dggs, seq, r) {
+  const [lng, alat] = dggs.sequenceNumToGeo([seq], r)[0];
+  return [lng, dggs.igeo7AuthalicToGeo(alat)];
+}
+
 // MapLibre serializes GeoJSON to a web worker via structured clone, which cannot
 // carry BigInt. webDggrid puts BigInt sequence numbers in feature ids/properties,
 // so stringify them before handing the FeatureCollection to the map.
@@ -64,7 +78,7 @@ function cleanFC(fc) {
 // webDggrid returns only the cell corners; the true cell edges are great-circle
 // arcs. Drawing straight lon/lat chords between far-apart corners looks
 // catastrophic for large (low-resolution / polar) cells. We densify each edge
-// with spherical (great-circle) interpolation — webDggrid's own docs recommend
+// with spherical (great-circle) interpolation - webDggrid's own docs recommend
 // this with unwrap=false for sphere-aware renderers (incl. the globe projection).
 const TO_R = Math.PI / 180;
 const TO_D = 180 / Math.PI;
@@ -89,9 +103,15 @@ function gcSegment(a, b) {
   return pts;
 }
 // Densify a cell ring with great-circle arcs and make it antimeridian/pole-safe.
-// Pole-enclosing cells (only the giant res-0/1 base pentagons) get a cap closure
-// so they fill instead of leaving a hole; a hairline seam at the exact pole
-// remains — a known limitation of representing a spherical cap as a flat polygon.
+// KNOWN DEFECT, see docs/ecosystem/explorer.md. The cap branch below assumes a
+// ring that winds a full turn in longitude encloses a pole. In this orientation
+// NO cell encloses a pole: both poles lie exactly on a cell edge (the extreme
+// corner latitude is 69.09 at res 0 and 89.9987 at res 10, never 90). The
+// pole-crossing step therefore has dl = +/-180 to within floating point, which
+// the strict > 180 / < -180 tests catch or miss essentially at random. The
+// result is a false cap on pole-adjacent cells, drawing them across 325 to 359
+// degrees of longitude instead of their true extent. Fixing it properly means
+// detecting the pole-crossing edge itself rather than inferring it from winding.
 function densifyRing(ring) {
   const pts = [];
   for (let i = 0; i < ring.length - 1; i++) pts.push(...gcSegment(ring[i], ring[i + 1]));
@@ -107,7 +127,7 @@ function densifyRing(ring) {
     out.push([pts[i][0] + off, pts[i][1]]);
   }
 
-  // a ring that winds a full turn in longitude encircles a pole → cap it
+  // a ring that winds a full turn in longitude encircles a pole -> cap it
   const winding = out[out.length - 1][0] - out[0][0];
   if (Math.abs(winding) > 180) {
     const meanLat = out.reduce((s, p) => s + p[1], 0) / out.length;
@@ -121,10 +141,14 @@ function densifyRing(ring) {
 }
 
 // The 7 children (6 for pentagons) per the Z7 aperture-7 definition: append a
-// direction digit 0–6 to the cell's index. (DGGRID's sequenceNumChildren uses a
+// direction digit 0-6 to the cell's index. (DGGRID's sequenceNumChildren uses a
 // different, non-Z7 child notion and returns the wrong count.)
 function childSeqs(dggs, seq, r) {
-  if (r >= 20) return [];
+  // Stop at the explorer's resolution ceiling. The Z7 index itself goes deeper,
+  // but the slider cannot represent a finer resolution, so rendering children
+  // one level below the ceiling would put cells on the map that the resolution
+  // control cannot then return to.
+  if (r >= MAX_RES) return [];
   const z7 = dggs.sequenceNumToZ7(seq, r);
   const base = dggs.igeo7GetBaseCell(z7);
   const digits = [];
@@ -140,7 +164,7 @@ function childSeqs(dggs, seq, r) {
 }
 
 // Adds the overlay sources + layers. Fill layers read the pole-capped sources;
-// line layers read the uncapped *L sources. Idempotent — safe to call after a
+// line layers read the uncapped *L sources. Idempotent - safe to call after a
 // theme-driven setStyle (which drops sources/layers).
 function addOverlay(map) {
   for (const s of ["cells", "nbr", "child", "sel"]) {
@@ -183,11 +207,21 @@ export default function Z7Explorer() {
   const fcOf = useCallback((seqs, r) => {
     const dggs = dggsRef.current;
     if (!seqs.length) return EMPTY;
-    // unwrap=false → raw corners; we densify edges as great-circle arcs ourselves.
+    // unwrap=false -> raw corners; we densify edges as great-circle arcs ourselves.
     const fc = cleanFC(dggs.sequenceNumToGridFeatureCollection(seqs, r, false));
     for (const f of fc.features) {
       if (f.geometry && f.geometry.type === "Polygon") {
-        f.geometry.coordinates = f.geometry.coordinates.map(densifyRing);
+        // Cell corners come back in authalic latitude, like sequenceNumToGeo.
+        // Densify FIRST, in authalic space, because that is where a cell edge is
+        // a true great circle; converting the corners and then densifying would
+        // trace a subtly different curve. Then convert each vertex latitude to
+        // geodetic so the polygons sit in the same space as the basemap, the
+        // reported centroid and the flyTo target. Longitude is untouched by the
+        // conversion, which preserves densifyRing's antimeridian unwrapping and
+        // its +/-90 pole cap (authalic and geodetic agree at the poles).
+        f.geometry.coordinates = f.geometry.coordinates.map((ring) =>
+          densifyRing(ring).map(([lng, alat]) => [lng, dggs.igeo7AuthalicToGeo(alat)])
+        );
       }
     }
     return fc;
@@ -228,7 +262,7 @@ export default function Z7Explorer() {
         seen.add(key);
         let g;
         try {
-          g = dggs.sequenceNumToGeo([n], r)[0]; // [lng, lat]
+          g = geoOf(dggs, n, r); // [lng, lat], geodetic - comparable to map bounds
         } catch {
           continue;
         }
@@ -262,7 +296,7 @@ export default function Z7Explorer() {
 
       const z7 = dggs.sequenceNumToZ7(seq, r);
       const id = dggs.igeo7ToString(z7);
-      const [lng, lat] = dggs.sequenceNumToGeo([seq], r)[0];
+      const [lng, lat] = geoOf(dggs, seq, r);
       const nbrs = (dggs.sequenceNumNeighbors([seq], r)[0] || []).filter((n) =>
         dggs.igeo7IsValid(dggs.sequenceNumToZ7(n, r))
       );
@@ -324,11 +358,10 @@ export default function Z7Explorer() {
           attributionControl: { compact: true },
         });
         mapRef.current = map;
-        if (typeof window !== "undefined") window.__z7map = map; // debug handle
         map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
         map.on("load", () => {
-          // Globe projection — an equal-area DGGS must not be shown on Web
+          // Globe projection - an equal-area DGGS must not be shown on Web
           // Mercator (it inflates the poles); the globe renders cells true to
           // shape and area. (MapLibre cannot render EPSG:4326 flat.)
           map.setProjection({ type: "globe" });
@@ -352,7 +385,7 @@ export default function Z7Explorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Theme switch → swap basemap tiles, keep overlays.
+  // Theme switch -> swap basemap tiles, keep overlays.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -377,11 +410,11 @@ export default function Z7Explorer() {
     if (sel) {
       // re-resolve the selected centroid at the new resolution
       const dggs = dggsRef.current;
-      const [lng, lat] = dggs.sequenceNumToGeo([sel.seq], sel.res)[0];
+      const [lng, lat] = geoOf(dggs, sel.seq, sel.res);
       try {
         selectGeo(lat, lng, r, {});
       } catch {
-        /* singularity at this res — leave selection */
+        /* singularity at this res - leave selection */
       }
     }
   };
@@ -405,6 +438,10 @@ export default function Z7Explorer() {
       const z7 = /^0x/i.test(raw) ? BigInt(raw) : dggs.igeo7FromString(raw);
       if (!dggs.igeo7IsValid(z7)) throw new Error("invalid");
       const r = dggs.igeo7GetResolution(z7);
+      // A longer Z7 string is a perfectly valid index, but this explorer only
+      // goes to MAX_RES and the slider could not represent it. Reject it rather
+      // than silently driving the resolution control out of range.
+      if (r > MAX_RES) throw new Error("resolution above the explorer's ceiling");
       const seq = dggs.z7ToSequenceNum(z7, r);
       setRes(r);
       resRef.current = r;
@@ -474,7 +511,7 @@ export default function Z7Explorer() {
           <summary>How to use</summary>
           <p>Click the map to resolve the containing IGEO7 cell at the chosen resolution, or look one up by latitude/longitude or by Z7 index. Use <b>Parent</b> and <b>Children</b> to walk the hierarchy; the yellow ring shows the cell's neighbours.</p>
           <p>
-            Learn more: <a href="/docs/concepts/z7-indexing">Z7 indexing</a> · <a href="/docs/intro">Introduction</a> · <a href="/docs/reference/restable">Resolution table</a>
+            Learn more: <a href="/docs/concepts/z7-indexing">Z7 indexing</a> · <a href="/docs/reference/restable">Resolution table</a> · <a href="/docs/ecosystem/explorer">How this explorer works</a>
           </p>
         </details>
       </div>
@@ -489,7 +526,7 @@ export default function Z7Explorer() {
           <Row k="Neighbours" v={panel.nbr} />
           <div className={styles.btnRow}>
             <button className={styles.btn} onClick={onParent} disabled={panel.res <= 0}>↑ Parent</button>
-            <button className={styles.btn} onClick={onToggleKids}>{kidsShown ? `Hide ${panel.kids}` : `Show ${panel.kids}`} children</button>
+            <button className={styles.btn} onClick={onToggleKids} disabled={panel.kids === 0}>{kidsShown ? `Hide ${panel.kids}` : `Show ${panel.kids}`} children</button>
           </div>
         </div>
       )}

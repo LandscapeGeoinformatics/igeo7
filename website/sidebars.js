@@ -76,6 +76,8 @@ const sidebars = {
         { type: "doc", id: "ecosystem/pydggsapi", label: "pydggsapi" },
         { type: "doc", id: "ecosystem/xarray-xdggs", label: "Xarray-XDGGS" },
         { type: "doc", id: "ecosystem/ogc-api-dggs", label: "OGC API DGGS" },
+        { type: "doc", id: "ecosystem/explorer", label: "Interactive Explorer" },
+        { type: "doc", id: "ecosystem/explorer-verification", label: "Explorer Verification" },
       ],
     },
     {

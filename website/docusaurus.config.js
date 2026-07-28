@@ -31,21 +31,19 @@ const config = {
   themes: ["@docusaurus/theme-mermaid"],
 
   plugins: [
-    // webdggrid ships an emscripten loader whose dead `new URL("libdggrid.wasm",
-    // import.meta.url)` fallback branch makes webpack 5 try to resolve a .wasm
-    // asset that isn't shipped (the wasm is embedded in the JS). The runtime uses
-    // the embedded binary, so we disable URL-asset parsing for that one module.
+    // webdggrid's emscripten loader has a dead fallback branch referencing
+    // "libdggrid.wasm". The runtime never takes it, because the wasm is embedded
+    // in the shipped JavaScript, but webpack still tries to resolve the module at
+    // build time and fails. Aliasing that one exact request to `false` resolves
+    // it to an empty module and the build proceeds.
+    //
+    // Deliberately scoped to a single exact-match alias: this is the site's
+    // shared build config, so nothing here should affect any other module.
     function webdggridWasmPlugin() {
       return {
         name: "webdggrid-wasm",
         configureWebpack() {
           return {
-            // Disable webpack's `new URL(asset, import.meta.url)` asset emission
-            // (the embedded-wasm runtime never takes that branch), and alias the
-            // phantom asset to a harmless empty module as a fallback.
-            module: {
-              parser: { javascript: { url: false } },
-            },
             resolve: {
               alias: { "libdggrid.wasm": false },
             },
