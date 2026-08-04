@@ -1,172 +1,345 @@
-.wrap {
-  position: relative;
-  width: 100%;
-  height: calc(100vh - var(--ifm-navbar-height));
-  min-height: 480px;
-  overflow: hidden;
+/*
+ * Layout follows proposal/mockup.html: a page header, then a full-bleed map
+ * with a docked panel on the right, then a full-width help bar. Everything is
+ * in document flow rather than floating over the map, which is what lets the
+ * panel drop below the map on narrow viewports.
+ *
+ * Colours come from Docusaurus' own CSS variables, so dark mode needs no
+ * separate theme work.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  /* dvh, not vh: on mobile browsers vh includes the retracting URL bar, which
+     is what used to make this page scroll at every phone size. */
+  height: calc(100dvh - var(--ifm-navbar-height));
 }
 
+/* ---- page header ----
+   One row, so the map keeps the vertical space: title left, strapline beside it,
+   truncated rather than wrapped. */
+.header {
+  padding: 0.55rem 1.5rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+.header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.headerText {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.9rem;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ---- explorer: map + docked panel ---- */
+.explorer {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* lets the flex child actually shrink instead of overflowing */
+}
+.mapArea {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
 .map {
   position: absolute;
   inset: 0;
 }
-
-.loading,
-.error {
+.resBadge {
   position: absolute;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  background: var(--ifm-background-surface-color);
-  color: var(--ifm-font-color-base);
-  box-shadow: var(--ifm-global-shadow-lw);
-  font-size: 0.9rem;
-}
-.error {
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.62);
   color: #fff;
-  background: #dc2626;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.88rem;
+  font-family: var(--ifm-font-family-monospace);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  pointer-events: none;
 }
 
-.controls,
 .panel {
-  position: absolute;
-  z-index: 4;
+  width: 330px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--ifm-color-emphasis-300);
   background: var(--ifm-background-surface-color);
-  color: var(--ifm-font-color-base);
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: 10px;
-  box-shadow: var(--ifm-global-shadow-md);
-  padding: 0.85rem;
+  overflow-y: auto;
 }
-
-.controls {
-  top: 1rem;
-  left: 1rem;
-  width: 270px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+.section {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
 }
-
-.title {
+.label {
+  font-size: 0.78rem;
   font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 0.4rem;
 }
 
+/* resolution */
 .resRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  gap: 0.7rem;
 }
-.resRow input[type="range"] {
+.resNum {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+  min-width: 1.8rem;
+  text-align: center;
+}
+/* slider and its tick labels share a column, so the ticks line up with the
+   track rather than with the whole section */
+.resTrack {
   flex: 1;
-  accent-color: var(--ifm-color-primary);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.resTrack input[type="range"] {
+  width: 100%;
+  margin: 0;
+}
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--ifm-color-emphasis-600);
+  font-family: var(--ifm-font-family-monospace);
+  margin-top: 0.15rem;
 }
 
+/* inputs */
+.in {
+  width: 100%;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  color: var(--ifm-font-color-base);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.92rem;
+  outline: none;
+  min-width: 0;
+}
+.in:focus { border-color: var(--ifm-color-primary); }
+.bad {
+  border-color: #e05c5c;
+  background: rgba(224, 92, 92, 0.08);
+}
 .row {
   display: flex;
   gap: 0.4rem;
 }
-
-.in {
-  flex: 1;
-  min-width: 0;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--ifm-color-emphasis-300);
-  border-radius: 6px;
-  background: var(--ifm-background-color);
-  color: var(--ifm-font-color-base);
-  font-size: 0.85rem;
-}
-.bad {
-  border-color: #ef4444;
-  animation: shake 0.3s;
-}
-@keyframes shake {
-  25% { transform: translateX(-3px); }
-  75% { transform: translateX(3px); }
+.hint {
+  font-size: 0.78rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-top: 0.35rem;
 }
 
 .btn {
   padding: 0.4rem 0.7rem;
-  border: 0;
   border-radius: 6px;
-  background: var(--ifm-color-primary);
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 600;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-size: 0.9rem;
   cursor: pointer;
   white-space: nowrap;
 }
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.help {
-  font-size: 0.78rem;
-  color: var(--ifm-color-emphasis-700);
-}
-.help summary {
-  cursor: pointer;
+.btn:hover:not(:disabled) { border-color: var(--ifm-color-primary); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btnPrimary {
+  width: 100%;
+  margin-top: 0.45rem;
+  background: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: #fff;
   font-weight: 600;
 }
-.help p {
-  margin: 0.4rem 0 0;
-}
+.btnPrimary:hover { filter: brightness(1.08); }
 
-.panel {
-  bottom: 1rem;
-  left: 1rem;
-  width: 270px;
+/* selected-cell card */
+.card {
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  overflow: hidden;
 }
-
-.pid {
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.4rem;
-  word-break: break-all;
+.cardHeader {
+  background: var(--ifm-color-emphasis-100);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
 }
-
 .prow {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 0.5rem;
-  font-size: 0.82rem;
-  padding: 0.12rem 0;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.88rem;
 }
+.prow + .prow { border-top: 1px solid var(--ifm-color-emphasis-100); }
 .pk {
   color: var(--ifm-color-emphasis-600);
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 .pv {
   font-family: var(--ifm-font-family-monospace);
+  font-size: 0.88rem;
   text-align: right;
   word-break: break-all;
 }
+.pvAccent { color: #2a9d5c; font-weight: 600; }
+:global([data-theme="dark"]) .pvAccent { color: #4ade80; }
+.empty {
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.9rem;
+  font-style: italic;
+}
 
-.btnRow {
+/* hierarchy buttons */
+.btnCol {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.55rem;
+  flex-direction: column;
+  gap: 0.35rem;
 }
-.btnRow .btn {
-  flex: 1;
+.btnWide {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btnWide:hover:not(:disabled) { border-color: var(--ifm-color-primary); }
+.btnWide:disabled { opacity: 0.45; cursor: default; }
+.btnWide[data-on="true"] {
+  border-color: var(--ifm-color-primary);
+  background: var(--ifm-color-emphasis-100);
+}
+.btnSub {
+  margin-left: auto;
   font-size: 0.78rem;
-  padding: 0.4rem 0.3rem;
+  color: var(--ifm-color-emphasis-600);
+  font-family: var(--ifm-font-family-monospace);
 }
 
-@media (max-width: 600px) {
-  .controls,
+/* ---- help bar ---- */
+.helpBar {
+  flex-shrink: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+  padding: 0.4rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  /* one line, always: wrapping turned this into a two-row slab under the map */
+  flex-wrap: nowrap;
+  overflow: hidden;
+  font-size: 0.82rem;
+  color: var(--ifm-color-emphasis-700);
+}
+.helpItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.key {
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  color: var(--ifm-font-color-base);
+}
+.attrib {
+  margin-left: auto;
+  padding-left: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.attrib strong { color: var(--ifm-font-color-base); font-weight: 600; }
+
+/* ---- status overlays ---- */
+.loading,
+.error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  padding: 0.7rem 1.1rem;
+  border-radius: 6px;
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  font-size: 0.92rem;
+}
+.error { border-color: #e05c5c; color: #e05c5c; max-width: 80%; }
+
+/* ---- narrow viewports: panel drops below the map (mockup breakpoint) ---- */
+@media (max-width: 700px) {
+  .explorer { flex-direction: column; }
+  .mapArea { flex: 1; min-height: 300px; }
   .panel {
-    width: calc(100vw - 2rem);
+    width: 100%;
+    height: 280px;
+    flex-shrink: 0;
+    border-left: none;
+    border-top: 1px solid var(--ifm-color-emphasis-300);
   }
-  .panel {
-    bottom: 0.5rem;
+  .header {
+    padding: 0.5rem 1rem;
   }
+  .header h1 { font-size: 1.1rem; }
+  .headerText { display: none; }
+  /* one line still, but swipeable, so the shortcuts and attribution stay
+     reachable instead of being cut off at the right edge */
+  .helpBar {
+    padding: 0.4rem 1rem;
+    gap: 0.8rem;
+    font-size: 0.7rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .helpBar::-webkit-scrollbar { display: none; }
+  .attrib { margin-left: 0; overflow: visible; }
 }

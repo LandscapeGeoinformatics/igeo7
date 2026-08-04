@@ -18,6 +18,8 @@ import {
   childSeqs,
   parseZ7Input,
   inBounds,
+  sphericalAreaKm2,
+  formatArea,
 } from "../src/components/Z7Explorer/geometry.mjs";
 // Same config object the explorer runs on. The expectations below are pinned to
 // it -- the Lisbon indices, the base-cell range 00..11 and the named pole cells
@@ -162,6 +164,33 @@ for (const id of ["00", "000", "0000", "11", "114", "08"]) {
   check("no children offered at the resolution ceiling", childSeqs(dggs, seq, MAX_RES).length === 0);
 }
 
+// MAX_RES is this page's scope, not an engine limit. Record where the real
+// ceiling is, so nobody has to rediscover it before raising the slider: a Z7
+// index spends 4 bits on the base cell and 3 per digit, so resolution 20 fills
+// a 64-bit word exactly and 21 cannot exist.
+{
+  check("Z7 bit budget puts the true ceiling at resolution 20", 4 + 3 * 20 === 64 && 4 + 3 * 21 > 64);
+  let deepest = 0;
+  let prev = null;
+  let chainOk = true;
+  for (let r = 0; r <= 20; r++) {
+    const seq = dggs.geoToSequenceNum([[-9.1393, dggs.igeo7GeoToAuthalic(38.7223)]], r)[0];
+    const id = idOf(seq, r);
+    const [clon, alat] = dggs.sequenceNumToGeo([seq], r)[0];
+    const clat = dggs.igeo7AuthalicToGeo(alat);
+    const roundTrips = dggs.geoToSequenceNum([[clon, dggs.igeo7GeoToAuthalic(clat)]], r)[0] === seq;
+    // 5 or 6: at resolution 0 every cell is a pentagon.
+    const n = (dggs.sequenceNumNeighbors([seq], r)[0] || []).length;
+    const nbrsOk = n === 6 || n === 5;
+    if (id.length !== r + 2 || !roundTrips || !nbrsOk) break;
+    if (prev !== null && !id.startsWith(prev)) chainOk = false;
+    prev = id;
+    deepest = r;
+  }
+  check(`engine stays correct all the way to resolution 20 (reached ${deepest})`, deepest === 20);
+  check("...and the parent prefix chain holds at every level", chainOk);
+}
+
 // =========================================================================
 describe("Bug 3 - antimeridian viewport bounds");
 
@@ -275,6 +304,66 @@ for (const [id, wantLat] of [["00", 90], ["01", 90], ["005", 90], ["013", 90], [
     const ext = lonExtent(ring);
     check(`antimeridian cell ${idOf(s, r)} stays continuous (extent ${ext.toFixed(2)} deg)`, ext < 20, `spans ${ext.toFixed(1)}`);
   }
+}
+
+// =========================================================================
+describe("Cell area");
+
+// Against a closed-form spherical rectangle: R^2 * dlon * (sin lat2 - sin lat1).
+{
+  const R = 6371.0072, T = Math.PI / 180;
+  for (const [name, box, exact] of [
+    ["10x10 deg box at the equator", [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]], R * R * (10 * T) * Math.sin(10 * T)],
+    ["a whole hemisphere", [[-180, 0], [-90, 0], [0, 0], [90, 0], [180, 0], [180, 90], [-180, 90], [-180, 0]], 2 * Math.PI * R * R],
+  ]) {
+    const got = sphericalAreaKm2(box);
+    const err = Math.abs(got - exact) / exact;
+    check(`${name}: ${got.toFixed(0)} km² vs exact ${exact.toFixed(0)}`, err < 1e-9, `relative error ${err.toExponential(2)}`);
+  }
+}
+
+// cellAreaKM(r) is exactly Earth / (10 * 7^r). That is the hexagon area, which
+// is why the explorer uses it for hexagons and only measures the pentagons.
+{
+  const EARTH_KM2 = 510065621.7;
+  for (const r of [0, 1, 3, 5, 8]) {
+    const expect = EARTH_KM2 / (10 * 7 ** r);
+    check(
+      `cellAreaKM(${r}) = Earth / (10 * 7^${r})`,
+      Math.abs(dggs.cellAreaKM(r) / expect - 1) < 1e-6,
+      `got ${dggs.cellAreaKM(r)} want ${expect}`
+    );
+  }
+}
+
+// A cell edge under ISEA is not a great-circle arc, so measuring the drawn
+// polygon only approximates the true area. It converges as cells shrink: pin
+// that, because it is the reason hexagons take the published figure instead.
+{
+  const measured = (id) => {
+    const [seq, r] = seqOfId(id);
+    return sphericalAreaKm2(densifyRing(rawRing(seq, r)));
+  };
+  for (const [id, r, tol] of [["006", 1, 2e-2], ["00641", 3, 1e-3], ["0064156", 5, 1e-4], ["0064156546", 8, 1e-4]]) {
+    const ratio = measured(id) / dggs.cellAreaKM(r);
+    check(
+      `hexagon ${id} (res ${r}) measures within ${(tol * 100).toFixed(1)}% of the published area`,
+      Math.abs(ratio - 1) < tol,
+      `ratio ${ratio.toFixed(5)}`
+    );
+  }
+  // The twelve pentagons are genuinely smaller, which is the whole reason they
+  // are not given the hexagon figure.
+  for (const [pentId, r] of [["000", 1], ["00000", 3], ["0000000", 5]]) {
+    const p = measured(pentId);
+    const [seq] = seqOfId(pentId);
+    check(`pentagon ${pentId} is smaller than the res-${r} hexagon area`, p < dggs.cellAreaKM(r), `pent ${p.toFixed(0)} vs hex ${dggs.cellAreaKM(r).toFixed(0)}`);
+    check(`pentagon ${pentId} really is a pentagon`, isPentagon(seq, r));
+  }
+}
+
+for (const [km2, want] of [[42498941, "42,498,941 km²"], [3034.84, "3,035 km²"], [8.848, "8.85 km²"], [0.18057, "180,570 m²"], [0, "-"]]) {
+  check(`formatArea(${km2}) -> ${want}`, formatArea(km2) === want, `got ${formatArea(km2)}`);
 }
 
 // =========================================================================

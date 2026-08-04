@@ -234,6 +234,41 @@ export function childSeqs(dggs, seq, r) {
 }
 
 /**
+ * WGS84 authalic radius: the radius of the sphere with the same surface area as
+ * the ellipsoid. The right choice here because IGEO7 is an equal-area grid.
+ */
+const AUTHALIC_RADIUS_KM = 6371.0072;
+
+/**
+ * Area of a closed lon/lat ring on the sphere, in square kilometres.
+ *
+ * webDggrid's cellAreaKM() reports one average figure per resolution, which is
+ * right for hexagons but overstates the twelve pentagons. This computes the
+ * real thing from the cell's own boundary.
+ *
+ * Uses the standard spherical-excess-by-longitude formula, which needs the ring
+ * to be continuous in longitude rather than wrapped into -180..180 -- exactly
+ * what densifyRing() already produces.
+ */
+export function sphericalAreaKm2(ring) {
+  let total = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [lon1, lat1] = ring[i];
+    const [lon2, lat2] = ring[i + 1];
+    total += (lon2 - lon1) * TO_R * (2 + Math.sin(lat1 * TO_R) + Math.sin(lat2 * TO_R));
+  }
+  return Math.abs((total * AUTHALIC_RADIUS_KM * AUTHALIC_RADIUS_KM) / 2);
+}
+
+/** Human-readable area: km2, dropping to m2 once cells get small. */
+export function formatArea(km2) {
+  if (!isFinite(km2) || km2 <= 0) return "-";
+  if (km2 < 1) return `${Math.round(km2 * 1e6).toLocaleString("en-US")} m²`;
+  const digits = km2 < 10 ? 2 : km2 < 1000 ? 1 : 0;
+  return `${km2.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })} km²`;
+}
+
+/**
  * The Z7 text grammar: a two-digit base cell 00..11, then one direction digit
  * 0..6 per resolution step. Digit 7 is the unused-slot terminator in the bit
  * layout, not a direction, so it must not appear in a text index.

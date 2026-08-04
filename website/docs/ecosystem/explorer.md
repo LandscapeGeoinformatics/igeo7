@@ -15,21 +15,73 @@ computed in your browser as you pan, click and type.
 - Shows IGEO7 cell boundaries as a vector overlay on a basemap, at resolutions
   0 to 10.
 - Click anywhere on the map to resolve the containing cell at the current
-  resolution, and see its Z7 index, hex form, centroid, cell type and neighbour
-  count.
+  resolution, and see its Z7 index, hex form, centroid, area, cell type and
+  neighbour count.
 - Look a cell up by latitude and longitude, or by Z7 index. Both the Z7 string
   form (`0064156`) and the hex form (`0x0D0DDFFFFFFFFFFF`) are accepted.
 - Walk the hierarchy with the parent button and the show-children button, which
   draws the seven children (six for a pentagon).
-- Highlights the k=1 neighbour ring around the selected cell.
+- Toggles the k=1 neighbour ring around the selected cell.
+
+## Layout
+
+The page follows the mockup issued with the statement of work: a header
+carrying the grid's configuration as badges, a full-bleed map with a docked
+control panel on its right, and a help bar along the bottom listing the
+keyboard shortcuts and the library attribution.
+
+Everything is in normal document flow rather than floating over the map, which
+is what lets the panel drop below the map on a narrow viewport. On phones the
+map also opens on the whole globe rather than a continental view, since that
+reads far better in a short map area.
+
+| Key | Action |
+|---|---|
+| `[` `]` | Decrease / increase resolution |
+| `P` | Go to parent |
+| `C` | Show or hide children |
+| `R` | Toggle the k-ring |
+| `+` `−`, arrows | Zoom and pan (MapLibre's own bindings) |
+
+Shortcuts are inert while a text field has focus, so typing `c` into the Z7 box
+does not toggle the children layer.
+
+## Cell area
+
+A hexagon's area is `cellAreaKM(res)`, which is exactly Earth ÷ (10 × 7^res) and
+is the same series published in the [resolution table](../reference/restable.md),
+so the two cross-check.
+
+The area is deliberately *not* measured from the drawn polygon. A cell edge
+under ISEA is not a great-circle arc, so a great-circle polygon only
+approximates it: about 1.6% out for a resolution-1 hexagon, converging to an
+exact match by resolution 5.
+
+The twelve pentagons are the exception. They are materially smaller than the
+hexagons and no published figure covers them, so they are measured from the
+cell's own boundary. That measurement is done on the authalic sphere, before
+latitudes are converted to geodetic, because that is the sphere the grid is
+equal-area on. Note that at resolution 0 *every* cell is a pentagon, so no cell
+there has the nominal area the table lists.
 
 ## How it is built
 
-The explorer is a React component at
-`website/src/components/Z7Explorer/index.js`, mounted on the `/explore` route by
-`website/src/pages/explore.js`. The cell maths that needs no browser -- ring
-geometry, child enumeration, index parsing and the viewport bounds test -- sits
-beside it in `geometry.mjs` so it can be tested directly in Node.
+The explorer is mounted on the `/explore` route by
+`website/src/pages/explore.js`. Under `website/src/components/Z7Explorer/`:
+
+| File | Role |
+|---|---|
+| `index.js` | engine loading, map lifecycle, state and handlers |
+| `PageHeader.js` | title and configuration badges |
+| `Panel.js` | the docked control panel (presentational only) |
+| `HelpBar.js` | shortcuts and attribution |
+| `geometry.mjs` | ring geometry, children, index parsing, bounds, area |
+| `igeo7-config.mjs` | the grid definition |
+
+`geometry.mjs` holds the cell maths that needs no browser, so it can be tested
+directly in Node. `Panel.js` owns no state: everything is passed in from
+`index.js`, which keeps the layout readable without knowing how the engine
+works.
 
 It is wrapped in `@docusaurus/BrowserOnly`. This matters: Docusaurus
 pre-renders every page at build time in Node, and the explorer needs both
@@ -167,11 +219,20 @@ accepted, the grid stopped dead there.
 - **Hexagons and pentagons only.** IGEO7 is a hexagonal grid with twelve
   pentagons. The other topologies the underlying engine can produce are
   different grids, not display options, and are deliberately not exposed.
-- **Resolution ceiling of 10**, matching the scope of this page. The Z7 index
-  itself goes considerably deeper, so a longer Z7 string is a valid index but is
-  rejected by the lookup box, and the children control is disabled on a
-  resolution 10 cell rather than drawing cells the resolution slider could not
-  return to.
+- **Resolution ceiling of 10**, matching the scope of this page. This is a
+  setting, not a limit: `MAX_RES` in `geometry.mjs`. The engine itself has been
+  checked at every level up to 20 and is correct throughout -- indices,
+  centroid round-trips, neighbour counts and the parent prefix chain all hold.
+  Twenty is the true ceiling, and exactly so: a Z7 index spends 4 bits on the
+  base cell and 3 on each digit, so resolution 20 fills a 64-bit word precisely
+  and resolution 21 cannot be represented.
+
+  Two things would need attention before raising it. `flyTo` caps at zoom 16,
+  about 2.4 m per pixel, so cells go sub-pixel beyond roughly resolution 13; and
+  the basemap runs out of tiles near zoom 20. Below the ceiling, a longer Z7
+  string is still a valid index but is rejected by the lookup box, and the
+  children control is disabled on a resolution 10 cell rather than drawing cells
+  the slider could not then return to.
 - **Cell cap.** At high resolutions on a wide viewport the 1400 cell cap will
   fill only part of the visible area. Zoom in to see a complete grid.
 

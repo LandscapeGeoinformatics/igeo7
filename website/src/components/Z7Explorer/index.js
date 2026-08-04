@@ -10,7 +10,12 @@ import {
   childSeqs,
   parseZ7Input,
   inBounds,
+  sphericalAreaKm2,
+  formatArea,
 } from "./geometry.mjs";
+import PageHeader from "./PageHeader";
+import Panel from "./Panel";
+import HelpBar from "./HelpBar";
 // IGEO7 = DGGRID ISEA aperture-7, Snyder vert0 latitude, icosahedron orientation
 // longitude 11.2 (NOT the DGGRID default 11.25). To change the grid, edit
 // igeo7-config.mjs -- it is the one place, shared with both test harnesses.
@@ -45,6 +50,12 @@ function basemapStyle(dark) {
 
 const EMPTY = { type: "FeatureCollection", features: [] };
 const hexOf = (z7) => "0x" + z7.toString(16).toUpperCase().padStart(16, "0");
+
+/** "38.6169° N" - rounded before the sign is read, so -0.00001 is not "S". */
+function hemisphere(v, pos, neg) {
+  const r = Number(v.toFixed(4));
+  return `${Math.abs(r).toFixed(4)}° ${r < 0 ? neg : pos}`;
+}
 
 // The authalic conversion is a round trip, and both halves are mandatory.
 // geoToSequenceNum expects an *authalic* latitude, so every geo->cell call goes
@@ -104,11 +115,15 @@ export default function Z7Explorer() {
   const selRef = useRef(null); // { seq (bigint), res } of the selected cell
   const kidsRef = useRef(false); // children currently shown?
 
+  const ringRef = useRef(true); // k=1 ring currently shown? (on by default)
+  const redrawRef = useRef(null); // pending debounced grid redraw
+
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
   const [res, setRes] = useState(0);
-  const [panel, setPanel] = useState(null); // { id, hex, res, lat, lon, type, nbr, kids }
+  const [panel, setPanel] = useState(null);
   const [kidsShown, setKidsShown] = useState(false);
+  const [ringShown, setRingShown] = useState(true);
   const [latInput, setLatInput] = useState(String(LISBON.lat));
   const [lonInput, setLonInput] = useState(String(LISBON.lon));
   const [idInput, setIdInput] = useState("");
@@ -200,6 +215,39 @@ export default function Z7Explorer() {
     }
   }, [fcOf, viewportCells]);
 
+  // A full redraw costs roughly a quarter of a second of synchronous work at
+  // the cell cap, and a range input fires once per tick while it is dragged, so
+  // driving drawGrid directly froze the page for seconds on a 0 -> 10 sweep.
+  // The resolution readout still updates instantly; only the redraw waits for
+  // the drag to settle.
+  const drawGridSoon = useCallback(() => {
+    if (redrawRef.current) clearTimeout(redrawRef.current);
+    redrawRef.current = setTimeout(() => {
+      redrawRef.current = null;
+      drawGrid();
+    }, 160);
+  }, [drawGrid]);
+
+  // Surface area of one cell, in km2.
+  //
+  // For hexagons this is webDggrid's cellAreaKM(), which is exactly
+  // Earth / (10 * 7^res) -- the same series the site's own resolution table
+  // publishes, so the two cross-check. Measuring the drawn polygon instead
+  // would be worse, not better: a cell edge under ISEA is not a great-circle
+  // arc, so a great-circle polygon is only an approximation of it, off by about
+  // 1.6% for a resolution-1 hexagon (it does converge, reaching 1.00000 by
+  // resolution 5).
+  //
+  // The twelve pentagons are materially smaller and have no published figure,
+  // so they are measured from the cell's own boundary. That is done on the
+  // AUTHALIC sphere, before latitudes become geodetic, because that is the
+  // sphere the grid is equal-area on.
+  const areaOf = useCallback((dggs, seq, r, pentagon) => {
+    if (!pentagon) return dggs.cellAreaKM(r);
+    const fc = dggs.sequenceNumToGridFeatureCollection([seq], r, false);
+    return sphericalAreaKm2(densifyRing(fc.features[0].geometry.coordinates[0]));
+  }, []);
+
   // Render the selection ecosystem (cell + k=1 ring + optional children) and panel.
   const renderSelection = useCallback(
     (seq, r, { fly } = {}) => {
@@ -217,7 +265,7 @@ export default function Z7Explorer() {
       const pentagon = nbrs.length < 6;
 
       map.getSource("sel").setData(fcOf([seq], r));
-      map.getSource("nbr").setData(fcOf(nbrs, r));
+      map.getSource("nbr").setData(ringRef.current ? fcOf(nbrs, r) : EMPTY);
 
       if (kidsRef.current && kids.length) {
         map.getSource("child").setData(fcOf(kids, r + 1));
@@ -225,12 +273,22 @@ export default function Z7Explorer() {
         map.getSource("child").setData(EMPTY);
       }
 
+      let area = "-";
+      try {
+        area = formatArea(areaOf(dggs, seq, r, pentagon));
+      } catch {
+        /* leave as "-" rather than losing the whole panel over one field */
+      }
+
       setPanel({
         id,
         hex: hexOf(z7),
         res: r,
-        lat: lat.toFixed(4),
-        lon: lng.toFixed(4),
+        // Round before choosing the hemisphere, or a centroid at -0.00001
+        // displays as "0.0000 S".
+        latLabel: hemisphere(lat, "N", "S"),
+        lonLabel: hemisphere(lng, "E", "W"),
+        area,
         type: pentagon ? "Pentagon" : "Hexagon",
         nbr: nbrs.length,
         kids: kids.length,
@@ -240,7 +298,7 @@ export default function Z7Explorer() {
 
       if (fly) map.flyTo({ center: [lng, lat], zoom: Math.min(16, 1.4 * r + 2) });
     },
-    [fcOf]
+    [fcOf, areaOf]
   );
 
   const selectGeo = useCallback(
@@ -263,11 +321,16 @@ export default function Z7Explorer() {
         dggs.setDggs(IGEO7, 0);
         dggsRef.current = dggs;
 
+        // On a phone the map area is short and the panel sits below it, so open
+        // on the whole globe rather than a continental view -- it reads far
+        // better in that space and matches how the grid is meant to be seen.
+        const narrow = typeof window !== "undefined" && window.innerWidth <= 700;
+
         map = new maplibregl.Map({
           container: mapContainer.current,
           style: basemapStyle(dark),
           center: [LISBON.lon, LISBON.lat],
-          zoom: 3,
+          zoom: narrow ? 0.9 : 3,
           attributionControl: { compact: true },
         });
         mapRef.current = map;
@@ -314,11 +377,10 @@ export default function Z7Explorer() {
   }, [dark]);
 
   // --- UI handlers ---
-  const onRes = (e) => {
-    const r = Number(e.target.value);
+  const onRes = (r) => {
     setRes(r);
     resRef.current = r;
-    drawGrid();
+    drawGridSoon();
     const sel = selRef.current;
     if (sel) {
       // re-resolve the selected centroid at the new resolution
@@ -386,72 +448,91 @@ export default function Z7Explorer() {
     if (sel) renderSelection(sel.seq, sel.res, {});
   };
 
+  const onToggleRing = () => {
+    const next = !ringRef.current;
+    ringRef.current = next;
+    setRingShown(next);
+    const sel = selRef.current;
+    if (sel) renderSelection(sel.seq, sel.res, {});
+  };
+
+  // Keyboard shortcuts, as listed in the help bar and in proposal/mockup.html.
+  // "+ / -" and the arrow keys are MapLibre's own bindings and are left alone.
+  // Nothing fires while a field has focus, or typing "c" into the Z7 box would
+  // toggle the children layer.
+  useEffect(() => {
+    if (!ready) return;
+    const onKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target;
+      const tag = el && el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el && el.isContentEditable)) return;
+      switch (e.key) {
+        case "[":
+          if (resRef.current > 0) onRes(resRef.current - 1);
+          break;
+        case "]":
+          if (resRef.current < MAX_RES) onRes(resRef.current + 1);
+          break;
+        case "p":
+        case "P":
+          onParent();
+          break;
+        case "c":
+        case "C":
+          onToggleKids();
+          break;
+        case "r":
+        case "R":
+          onToggleRing();
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  // Drop any pending redraw if the component goes away mid-drag.
+  useEffect(() => () => redrawRef.current && clearTimeout(redrawRef.current), []);
+
   return (
-    <div className={styles.wrap}>
-      <div ref={mapContainer} className={styles.map} />
+    <div className={styles.page}>
+      <PageHeader />
 
-      {error && <div className={styles.error}>Failed to load the DGGS engine: {error}</div>}
-      {!ready && !error && <div className={styles.loading}>Loading IGEO7 engine…</div>}
-
-      <div className={styles.controls}>
-        <div className={styles.title}>IGEO7 / Z7 Explorer</div>
-
-        <label className={styles.resRow}>
-          <span>Resolution</span>
-          <input type="range" min={0} max={MAX_RES} value={res} onChange={onRes} />
-          <b>{res}</b>
-        </label>
-
-        <div className={styles.row}>
-          <input className={styles.in} value={latInput} onChange={(e) => setLatInput(e.target.value)} placeholder="lat" aria-label="latitude" />
-          <input className={styles.in} value={lonInput} onChange={(e) => setLonInput(e.target.value)} placeholder="lon" aria-label="longitude" />
-          <button className={styles.btn} onClick={onGoGeo}>Go</button>
+      <div className={styles.explorer}>
+        <div className={styles.mapArea}>
+          <div ref={mapContainer} className={styles.map} />
+          <div className={styles.resBadge}>res&nbsp;{res}</div>
+          {error && <div className={styles.error}>Failed to load the DGGS engine: {error}</div>}
+          {!ready && !error && <div className={styles.loading}>Loading IGEO7 engine…</div>}
         </div>
 
-        <div className={styles.row}>
-          <input
-            className={idBad ? `${styles.in} ${styles.bad}` : styles.in}
-            value={idInput}
-            onChange={(e) => setIdInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onGoId()}
-            placeholder="Z7 id e.g. 0064156 or 0x…"
-            aria-label="Z7 index"
-          />
-          <button className={styles.btn} onClick={onGoId}>Find</button>
-        </div>
-
-        <details className={styles.help}>
-          <summary>How to use</summary>
-          <p>Click the map to resolve the containing IGEO7 cell at the chosen resolution, or look one up by latitude/longitude or by Z7 index. Use <b>Parent</b> and <b>Children</b> to walk the hierarchy; the yellow ring shows the cell's neighbours.</p>
-          <p>
-            Learn more: <a href="/docs/concepts/z7-indexing">Z7 indexing</a> · <a href="/docs/reference/restable">Resolution table</a> · <a href="/docs/ecosystem/explorer">How this explorer works</a>
-          </p>
-        </details>
+        <Panel
+          res={res}
+          onRes={onRes}
+          latInput={latInput}
+          lonInput={lonInput}
+          setLatInput={setLatInput}
+          setLonInput={setLonInput}
+          onLocate={onGoGeo}
+          idInput={idInput}
+          setIdInput={setIdInput}
+          onGoId={onGoId}
+          idBad={idBad}
+          cell={panel}
+          kidsShown={kidsShown}
+          ringShown={ringShown}
+          onParent={onParent}
+          onToggleKids={onToggleKids}
+          onToggleRing={onToggleRing}
+        />
       </div>
 
-      {panel && (
-        <div className={styles.panel}>
-          <div className={styles.pid}>{panel.id}</div>
-          <Row k="Type" v={panel.type} />
-          <Row k="Resolution" v={panel.res} />
-          <Row k="Z7 hex" v={panel.hex} />
-          <Row k="Centroid" v={`${panel.lat}, ${panel.lon}`} />
-          <Row k="Neighbours" v={panel.nbr} />
-          <div className={styles.btnRow}>
-            <button className={styles.btn} onClick={onParent} disabled={panel.res <= 0}>↑ Parent</button>
-            <button className={styles.btn} onClick={onToggleKids} disabled={panel.kids === 0}>{kidsShown ? `Hide ${panel.kids}` : `Show ${panel.kids}`} children</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Row({ k, v }) {
-  return (
-    <div className={styles.prow}>
-      <span className={styles.pk}>{k}</span>
-      <span className={styles.pv}>{v}</span>
+      <HelpBar />
     </div>
   );
 }
