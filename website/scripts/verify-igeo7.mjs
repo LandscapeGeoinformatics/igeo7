@@ -20,20 +20,11 @@
  */
 import { Webdggrid } from "webdggrid";
 import { readFileSync } from "node:fs";
-
-// Must stay identical to IGEO7 in src/components/Z7Explorer/index.js, which is
-// the source of truth for the running explorer. Deliberately duplicated rather
-// than imported: this script runs in plain Node, the component is a webpack/JSX
-// module, and a shared module would have to satisfy both resolvers.
-const IGEO7 = {
-  poleCoordinates: { lat: 58.28252559, lng: 11.2 }, // 11.2°, NOT DGGRID's 11.25°
-  azimuth: 0,
-  topology: "HEXAGON",
-  projection: "ISEA",
-  aperture: 7,
-};
-
-const MAX_RES = 10;
+// The very same object the running explorer hands to setDggs(). Imported rather
+// than copied, so this harness cannot report green while checking a different
+// grid than the site actually serves.
+import { IGEO7 } from "../src/components/Z7Explorer/igeo7-config.mjs";
+import { MAX_RES } from "../src/components/Z7Explorer/geometry.mjs";
 
 // Same spread the explorer must stay correct over: the lab's golden anchor, the
 // lab's own location, the equator (where authalic == geodetic), the

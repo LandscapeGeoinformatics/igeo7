@@ -27,7 +27,9 @@ computed in your browser as you pan, click and type.
 
 The explorer is a React component at
 `website/src/components/Z7Explorer/index.js`, mounted on the `/explore` route by
-`website/src/pages/explore.js`.
+`website/src/pages/explore.js`. The cell maths that needs no browser -- ring
+geometry, child enumeration, index parsing and the viewport bounds test -- sits
+beside it in `geometry.mjs` so it can be tested directly in Node.
 
 It is wrapped in `@docusaurus/BrowserOnly`. This matters: Docusaurus
 pre-renders every page at build time in Node, and the explorer needs both
@@ -53,12 +55,16 @@ change name or behaviour, the component and the harness both need updating.
 
 ### The IGEO7 configuration
 
-IGEO7 is not DGGRID's default ISEA aperture-7 grid. Two things differ, and both
-are configured in the component:
+IGEO7 is not DGGRID's default ISEA aperture-7 grid. Two things differ. The first
+is set in `website/src/components/Z7Explorer/igeo7-config.mjs`, which the
+explorer and both harnesses import, so there is exactly one copy of it:
 
 ```js
-const IGEO7 = {
-  poleCoordinates: { lat: 58.28252559, lng: 11.2 }, // not DGGRID's 11.25
+export const ORIENTATION_LON = 11.2;   // not DGGRID's 11.25
+export const POLE_LAT = 58.28252559;
+
+export const IGEO7 = {
+  poleCoordinates: { lat: POLE_LAT, lng: ORIENTATION_LON },
   azimuth: 0,
   topology: "HEXAGON",
   projection: "ISEA",
@@ -68,6 +74,17 @@ const IGEO7 = {
 
 First, the icosahedron orientation longitude is **11.2 degrees**, not DGGRID's
 default of 11.25.
+
+Despite the name, `poleCoordinates` is not a geographic pole. It is where
+vertex 0 of the icosahedron is pinned to the Earth, which DGGRID's own
+configuration calls `dggs_vert0_lat` / `dggs_vert0_lon`. That vertex is the
+centre of base cell `00`, and the twelve icosahedron vertices are exactly the
+twelve pentagons of the grid. Changing the longitude spins the whole
+icosahedron about the Earth's axis: moving it from 11.2 to 15 shifts every one
+of the twelve pentagon centres by exactly 3.8 degrees of longitude and leaves
+their latitudes untouched. The latitude is quoted on the authalic sphere the
+grid is built on, which is why base cell `00` reports its centroid as 58.3971
+in WGS84 rather than 58.2825.
 
 Second, the **authalic latitude conversion** is mandatory, and it is a round
 trip. The engine works in authalic latitude, the map works in WGS84 geodetic
@@ -107,25 +124,46 @@ flat EPSG:4326 view, so the globe is also the only correct option available.
 Cell edges are true great-circle arcs, but the engine returns only the corner
 points. Drawing straight lines between corners looks badly wrong for large
 cells, so each edge is densified with spherical interpolation at roughly two
-degree steps. Rings are then unwrapped across the antimeridian, and a ring that
-winds a full turn in longitude is closed over the pole so it fills instead of
-leaving a hole.
+degree steps. Rings are then unwrapped so they stay continuous across the
+antimeridian.
+
+Cells at the poles need one more step. Neither pole is ever inside a cell or at
+a corner: each falls on the edge shared by two cells, so that edge has to be
+found and the ring closed over the pole itself. Finding it is not a matter of
+measuring how near an edge passes, because webDggrid describes that one shared
+edge differently for the two cells that meet along it. For one it is exactly 180
+degrees of longitude wide, whose wrap direction is then a coin flip in floating
+point; for the other it is a small near miss, which instead shows up as a ring
+that turns a full circle in longitude. The explorer recognises both signals, and
+neither depends on a distance threshold, which matters because cells range from
+about 2000 km wide at resolution 1 to a few metres at resolution 10.
+
+Once that edge is identified the ring is rotated so it closes there, the
+remaining edges are unwrapped, and the ring is then walked up one meridian to
+the pole, across it, and back down the other. Rotating first is what makes the
+crossing unambiguous: in latitude and longitude the pole is a whole line rather
+than a point, so the traverse could run either way around the globe, and only
+one of the two wraps the cell instead of the rest of the planet. After the
+rotation both ends have fixed longitudes and the direction is forced.
 
 Cell generation is viewport-bounded. A breadth-first flood fill starts from the
 cell at the map centre and expands through neighbours while they fall inside the
 padded viewport, stopping at 1400 cells. This is what keeps high resolutions
-usable without ever generating a global grid.
+usable without ever generating a global grid. The bounds test compares
+longitudes in the frame the map reports rather than directly: on the globe
+projection `getBounds()` returns unwrapped bounds, so a viewport over Fiji reads
+west 171.9 and east 187.1, while cell centroids arrive normalised to the range
+-180 to 180. Comparing those two directly rejected every cell east of the
+antimeridian, and since the flood fill only expands through cells it has
+accepted, the grid stopped dead there.
 
 ## Known limitations
 
-- **Cells touching the poles render incorrectly.** In this grid orientation no
-  cell encloses a pole: the poles fall exactly on a cell *edge*. The polygon
-  builder's pole handling misjudges that case, and at every resolution some of
-  the four pole-adjacent cells are drawn spanning most of the globe in longitude
-  instead of their true extent. Panning near either pole shows a fill covering
-  far more of the map than it should. This is a rendering defect, not an
-  indexing one: every computed index, centroid and neighbour relationship at the
-  poles remains correct, and the rest of the map is unaffected.
+- **A hairline seam at the poles.** The two cells meeting at a pole are both
+  drawn up to it, but webDggrid places that shared edge about 0.05 degrees apart
+  for the two of them, so one is capped a sliver short. The gap is a few
+  kilometres at the pole itself, where the projection converges, and it does not
+  grow with resolution. Indices, centroids and neighbours are unaffected.
 - **Hexagons and pentagons only.** IGEO7 is a hexagonal grid with twelve
   pentagons. The other topologies the underlying engine can produce are
   different grids, not display options, and are deliberately not exposed.
@@ -149,6 +187,20 @@ node scripts/verify-igeo7.mjs pts.csv    # check against expected values
 
 See [Explorer Verification](./explorer-verification.md) for the current results
 and the CSV format.
+
+A second harness covers what conformance cannot see, since a wrongly drawn cell
+can still carry the right index: Z7 input validation, child enumeration,
+viewport bounds and ring geometry, including every cell within two rings of
+either pole at several resolutions.
+
+```bash
+cd website
+node scripts/test-explorer.mjs
+```
+
+It exercises the pure helpers in
+`website/src/components/Z7Explorer/geometry.mjs`, which are kept in their own
+module precisely so they can be run outside a browser.
 
 ## Attribution and licence
 

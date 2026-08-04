@@ -4,21 +4,21 @@ import maplibregl from "maplibre-gl";
 import { Webdggrid } from "webdggrid";
 import "maplibre-gl/dist/maplibre-gl.css";
 import styles from "./styles.module.css";
-
+import {
+  MAX_RES,
+  densifyRing,
+  childSeqs,
+  parseZ7Input,
+  inBounds,
+} from "./geometry.mjs";
 // IGEO7 = DGGRID ISEA aperture-7, Snyder vert0 latitude, icosahedron orientation
-// longitude 11.2° (NOT the DGGRID default 11.25°). Authalic latitude conversion
-// is mandatory and applied to the input latitude before every geo->cell call.
+// longitude 11.2 (NOT the DGGRID default 11.25). To change the grid, edit
+// igeo7-config.mjs -- it is the one place, shared with both test harnesses.
+// Authalic latitude conversion is separate and mandatory; see geoOf() below.
 // Verified against the lab's pydggal golden table: Lisbon (38.7223,-9.1393) res5
 // -> 0064156, matching at every resolution for all non-degenerate points.
-const IGEO7 = {
-  poleCoordinates: { lat: 58.28252559, lng: 11.2 },
-  azimuth: 0,
-  topology: "HEXAGON",
-  projection: "ISEA",
-  aperture: 7,
-};
+import { IGEO7 } from "./igeo7-config.mjs";
 
-const MAX_RES = 10;
 const CELL_CAP = 1400; // viewport flood-fill ceiling (client-side performance limit)
 const LISBON = { lat: 38.7223, lon: -9.1393 };
 
@@ -75,96 +75,7 @@ function cleanFC(fc) {
   return fc;
 }
 
-// webDggrid returns only the cell corners; the true cell edges are great-circle
-// arcs. Drawing straight lon/lat chords between far-apart corners looks
-// catastrophic for large (low-resolution / polar) cells. We densify each edge
-// with spherical (great-circle) interpolation - webDggrid's own docs recommend
-// this with unwrap=false for sphere-aware renderers (incl. the globe projection).
-const TO_R = Math.PI / 180;
-const TO_D = 180 / Math.PI;
-function gcSegment(a, b) {
-  const lon1 = a[0] * TO_R, lat1 = a[1] * TO_R, lon2 = b[0] * TO_R, lat2 = b[1] * TO_R;
-  const d = 2 * Math.asin(
-    Math.min(1, Math.sqrt(Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2))
-  );
-  if (d < 1e-9) return [a];
-  const steps = Math.max(1, Math.ceil((d * TO_D) / 2)); // ≈2° per densified step
-  const pts = [];
-  const sd = Math.sin(d);
-  for (let i = 0; i < steps; i++) {
-    const f = i / steps;
-    const A = Math.sin((1 - f) * d) / sd;
-    const B = Math.sin(f * d) / sd;
-    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
-    const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
-    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-    pts.push([Math.atan2(y, x) * TO_D, Math.atan2(z, Math.hypot(x, y)) * TO_D]);
-  }
-  return pts;
-}
-// Densify a cell ring with great-circle arcs and make it antimeridian/pole-safe.
-// KNOWN DEFECT, see docs/ecosystem/explorer.md. The cap branch below assumes a
-// ring that winds a full turn in longitude encloses a pole. In this orientation
-// NO cell encloses a pole: both poles lie exactly on a cell edge (the extreme
-// corner latitude is 69.09 at res 0 and 89.9987 at res 10, never 90). The
-// pole-crossing step therefore has dl = +/-180 to within floating point, which
-// the strict > 180 / < -180 tests catch or miss essentially at random. The
-// result is a false cap on pole-adjacent cells, drawing them across 325 to 359
-// degrees of longitude instead of their true extent. Fixing it properly means
-// detecting the pole-crossing edge itself rather than inferring it from winding.
-function densifyRing(ring) {
-  const pts = [];
-  for (let i = 0; i < ring.length - 1; i++) pts.push(...gcSegment(ring[i], ring[i + 1]));
-  if (!pts.length) return ring;
-
-  // unwrap longitudes so the ring stays continuous across the antimeridian
-  const out = [[pts[0][0], pts[0][1]]];
-  let off = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const dl = pts[i][0] - pts[i - 1][0];
-    if (dl > 180) off -= 360;
-    else if (dl < -180) off += 360;
-    out.push([pts[i][0] + off, pts[i][1]]);
-  }
-
-  // a ring that winds a full turn in longitude encircles a pole -> cap it
-  const winding = out[out.length - 1][0] - out[0][0];
-  if (Math.abs(winding) > 180) {
-    const meanLat = out.reduce((s, p) => s + p[1], 0) / out.length;
-    const poleLat = meanLat > 0 ? 90 : -90;
-    out.push([out[out.length - 1][0], poleLat]);
-    out.push([out[0][0], poleLat]);
-  }
-
-  out.push([out[0][0], out[0][1]]); // close
-  return out;
-}
-
-// The 7 children (6 for pentagons) per the Z7 aperture-7 definition: append a
-// direction digit 0-6 to the cell's index. (DGGRID's sequenceNumChildren uses a
-// different, non-Z7 child notion and returns the wrong count.)
-function childSeqs(dggs, seq, r) {
-  // Stop at the explorer's resolution ceiling. The Z7 index itself goes deeper,
-  // but the slider cannot represent a finer resolution, so rendering children
-  // one level below the ceiling would put cells on the map that the resolution
-  // control cannot then return to.
-  if (r >= MAX_RES) return [];
-  const z7 = dggs.sequenceNumToZ7(seq, r);
-  const base = dggs.igeo7GetBaseCell(z7);
-  const digits = [];
-  for (let i = 1; i <= r; i++) digits.push(dggs.igeo7GetDigit(z7, i));
-  const seqs = [];
-  for (let d = 0; d <= 6; d++) {
-    const arr = digits.concat(d);
-    while (arr.length < 20) arr.push(7);
-    const cz = dggs.igeo7Encode(base, arr);
-    if (dggs.igeo7IsValid(cz)) seqs.push(dggs.z7ToSequenceNum(cz, r + 1));
-  }
-  return seqs;
-}
-
-// Adds the overlay sources + layers. Fill layers read the pole-capped sources;
-// line layers read the uncapped *L sources. Idempotent - safe to call after a
+// Adds the overlay sources + layers. Idempotent - safe to call after a
 // theme-driven setStyle (which drops sources/layers).
 function addOverlay(map) {
   for (const s of ["cells", "nbr", "child", "sel"]) {
@@ -232,13 +143,15 @@ export default function Z7Explorer() {
     const dggs = dggsRef.current;
     const map = mapRef.current;
     const c = map.getCenter();
-    const b = map.getBounds();
-    const pad = 0.25 * (b.getNorth() - b.getSouth() + 1e-6);
-    const inB = (lng, lat) =>
-      lat >= b.getSouth() - pad &&
-      lat <= b.getNorth() + pad &&
-      lng >= b.getWest() - pad &&
-      lng <= b.getEast() + pad;
+    const mb = map.getBounds();
+    const b = {
+      south: mb.getSouth(),
+      north: mb.getNorth(),
+      west: mb.getWest(),
+      east: mb.getEast(),
+    };
+    const pad = 0.25 * (b.north - b.south + 1e-6);
+    const inB = (lng, lat) => inBounds(lng, lat, b, pad);
     let seed;
     try {
       seed = dggs.geoToSequenceNum([[c.lng, dggs.igeo7GeoToAuthalic(c.lat)]], r)[0];
@@ -432,21 +345,21 @@ export default function Z7Explorer() {
 
   const onGoId = () => {
     const dggs = dggsRef.current;
-    const raw = idInput.trim();
-    if (!raw) return;
+    // parseZ7Input enforces the Z7 grammar before the engine sees the string.
+    // igeo7FromString itself accepts anything -- "hello" used to resolve to a
+    // real cell -- and a longer index, while perfectly valid, is above this
+    // explorer's ceiling and could not be represented on the slider.
+    const hit = parseZ7Input(dggs, idInput);
+    if (!hit) {
+      setIdBad(true);
+      setTimeout(() => setIdBad(false), 1200);
+      return;
+    }
     try {
-      const z7 = /^0x/i.test(raw) ? BigInt(raw) : dggs.igeo7FromString(raw);
-      if (!dggs.igeo7IsValid(z7)) throw new Error("invalid");
-      const r = dggs.igeo7GetResolution(z7);
-      // A longer Z7 string is a perfectly valid index, but this explorer only
-      // goes to MAX_RES and the slider could not represent it. Reject it rather
-      // than silently driving the resolution control out of range.
-      if (r > MAX_RES) throw new Error("resolution above the explorer's ceiling");
-      const seq = dggs.z7ToSequenceNum(z7, r);
-      setRes(r);
-      resRef.current = r;
+      setRes(hit.res);
+      resRef.current = hit.res;
       drawGrid();
-      renderSelection(seq, r, { fly: true });
+      renderSelection(hit.seq, hit.res, { fly: true });
     } catch {
       setIdBad(true);
       setTimeout(() => setIdBad(false), 1200);
