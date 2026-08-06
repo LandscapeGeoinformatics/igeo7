@@ -106,3 +106,19 @@ If you use IGEO7 in your research, please cite:
 
 Documentation content: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Website code: [MIT](LICENSE).
+
+
+## H3 comparison notes
+
+Icosahedron to Resolution 0 (Base Cells): Mixed Aperture 12 (4 & 3)
+
+The transition from the spherical icosahedron to the 122 H3 base cells (Resolution 0) is where the "mixed aperture" concept originates.
+
+   * The 122 Cells: H3 starts with 20 icosahedral faces. To reach 122 cells, H3 subdivides each face into an aperture 12 grid. The number of vertices in a subdivided icosahedron with
+     aperture $A$ is given by $10A + 2$. For H3, $10(12) + 2 = 122$.
+   * Mixed Aperture 43: The aperture 12 refinement is achieved by a combination of an aperture 4 step (doubling the resolution along axes) and an aperture 3 step (refining by $\sqrt{3}$
+     with a $30^\circ$ rotation). This mixed subdivision produces the 122 vertices that serve as the centers for the 110 hexagons and 12 pentagons of Resolution 0.
+   * Dymaxion Orientation: As specified in faceijk.c, H3 uses the Fuller Dymaxion orientation, which aligns the icosahedron such that all 12 vertices (and thus all 12 pentagons) are
+     placed in the ocean to minimize land-mass distortion.
+   * Hardcoding: The topology and spatial mapping of these 122 base cells are explicitly hardcoded in tables such as baseCellData, baseCellNeighbors, and faceIjkBaseCells in
+     src/h3lib/lib/baseCells.c.
