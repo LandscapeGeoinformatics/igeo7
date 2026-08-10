@@ -13,7 +13,7 @@ computed in your browser as you pan, click and type.
 ## What it does
 
 - Shows IGEO7 cell boundaries as a vector overlay on a basemap, at resolutions
-  0 to 10.
+  0 to 15.
 - Click anywhere on the map to resolve the containing cell at the current
   resolution, and see its Z7 index, hex form, centroid, area, cell type and
   neighbour count.
@@ -188,7 +188,7 @@ degrees of longitude wide, whose wrap direction is then a coin flip in floating
 point; for the other it is a small near miss, which instead shows up as a ring
 that turns a full circle in longitude. The explorer recognises both signals, and
 neither depends on a distance threshold, which matters because cells range from
-about 2000 km wide at resolution 1 to a few metres at resolution 10.
+about 2000 km wide at resolution 1 to under 4 metres at resolution 15.
 
 Once that edge is identified the ring is rotated so it closes there, the
 remaining edges are unwrapped, and the ring is then walked up one meridian to
@@ -198,16 +198,27 @@ than a point, so the traverse could run either way around the globe, and only
 one of the two wraps the cell instead of the rest of the planet. After the
 rotation both ends have fixed longitudes and the direction is forced.
 
-Cell generation is viewport-bounded. A breadth-first flood fill starts from the
-cell at the map centre and expands through neighbours while they fall inside the
-padded viewport, stopping at 1400 cells. This is what keeps high resolutions
-usable without ever generating a global grid. The bounds test compares
+Cell generation has two modes, chosen by comparing the cells needed to fill the
+visible area against a ceiling of 1400.
+
+Below the ceiling the whole visible area is tiled by a breadth-first flood fill
+from the cell at the map centre, expanding through neighbours while they fall
+inside the padded viewport, and the grid is redrawn as you pan. The bounds test
+compares
 longitudes in the frame the map reports rather than directly: on the globe
 projection `getBounds()` returns unwrapped bounds, so a viewport over Fiji reads
 west 171.9 and east 187.1, while cell centroids arrive normalised to the range
 -180 to 180. Comparing those two directly rejected every cell east of the
 antimeridian, and since the flood fill only expands through cells it has
 accepted, the grid stopped dead there.
+
+Above the ceiling -- which is every view at resolution 13 and finer -- tiling
+the viewport is not possible, so the explorer draws a local disk of complete
+rings around a seed cell instead: 1387 cells around a hexagon, 1381 around one
+of the twelve pentagons. That disk is anchored to the ground. Panning within it
+changes nothing on screen, and it is re-seeded only when the centre of the map
+leaves it. The badge in the corner names the mode and the sample size, so a
+local disk is never mistaken for a grid that failed to draw.
 
 ## Known limitations
 
@@ -219,22 +230,30 @@ accepted, the grid stopped dead there.
 - **Hexagons and pentagons only.** IGEO7 is a hexagonal grid with twelve
   pentagons. The other topologies the underlying engine can produce are
   different grids, not display options, and are deliberately not exposed.
-- **Resolution ceiling of 10**, matching the scope of this page. This is a
-  setting, not a limit: `MAX_RES` in `geometry.mjs`. The engine itself has been
-  checked at every level up to 20 and is correct throughout -- indices,
-  centroid round-trips, neighbour counts and the parent prefix chain all hold.
-  Twenty is the true ceiling, and exactly so: a Z7 index spends 4 bits on the
-  base cell and 3 on each digit, so resolution 20 fills a 64-bit word precisely
-  and resolution 21 cannot be represented.
+- **Resolution ceiling of 15**, a setting rather than a limit: `MAX_RES` in
+  `geometry.mjs`. Three different ceilings are worth keeping apart.
 
-  Two things would need attention before raising it. `flyTo` caps at zoom 16,
-  about 2.4 m per pixel, so cells go sub-pixel beyond roughly resolution 13; and
-  the basemap runs out of tiles near zoom 20. Below the ceiling, a longer Z7
-  string is still a valid index but is rejected by the lookup box, and the
-  children control is disabled on a resolution 10 cell rather than drawing cells
-  the slider could not then return to.
-- **Cell cap.** At high resolutions on a wide viewport the 1400 cell cap will
-  fill only part of the visible area. Zoom in to see a complete grid.
+  Twenty is the *index* ceiling, and exactly so: a Z7 index spends 4 bits on the
+  base cell and 3 on each digit, so resolution 20 fills a 64-bit word precisely
+  and resolution 21 cannot be represented. The engine has been checked at every
+  level up to 20 and is correct throughout -- indices, centroid round-trips,
+  neighbour counts and the parent prefix chain all hold.
+
+  Seventeen is the *display* ceiling. A resolution-17 grid needs zoom 21.6 to
+  fill a viewport and resolution 18 needs 23.0, against MapLibre's maximum of
+  22. Note when checking this that MapLibre's zoom is 512 pixel based, so ground
+  resolution at a given zoom is half the familiar figure.
+
+  Fifteen is what this page exposes, leaving headroom below the display limit. A
+  longer Z7 string is still a valid index but is rejected by the lookup box, and
+  the children control is disabled on a resolution 15 cell rather than drawing
+  cells the slider could not then return to. Basemap tiles are available to the
+  map's maximum zoom, though past about zoom 20 they are mostly blank away from
+  mapped features.
+- **Cell cap.** At resolution 13 and finer the grid is always a local disk of
+  about 1400 cells rather than a full tiling of the view, which is what keeps
+  the browser responsive. The disk stays where it was drawn; pan far enough and
+  it re-centres in one step.
 
 ## Verification
 
