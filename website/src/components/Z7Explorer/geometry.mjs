@@ -12,7 +12,29 @@
  */
 
 /** Explorer resolution ceiling. The Z7 index itself goes deeper. */
-export const MAX_RES = 10;
+export const MAX_RES = 15;
+
+/**
+ * MapLibre's default maximum zoom (src/ui/map.ts:437). The explorer sets no
+ * maxZoom of its own, so this is what actually applies.
+ */
+export const MAX_MAP_ZOOM = 22;
+
+/**
+ * The zoom at which a cell of the given resolution is comfortably interactive.
+ *
+ * The slope is not a fitted constant: aperture 7 shrinks a cell by sqrt(7) per
+ * resolution step, which is log2(7)/2 = 1.4037 zoom levels. The literal 1.4 is
+ * kept so behaviour at resolutions 0 to 10 is unchanged from what shipped.
+ *
+ * Beware when checking this by hand: MapLibre's zoom is 512px based
+ * (transform_helper.ts:159 sets _tileSize = 512), so metres per pixel is HALF
+ * the familiar 156543.03392 * cos(lat) / 2^z. The old inline formula capped at
+ * zoom 16, which left a resolution-15 cell 4px across.
+ */
+export function zoomForCell(res) {
+  return Math.min(MAX_MAP_ZOOM, 1.4 * res + 2);
+}
 
 /** IGEO7 has 12 base cells (0..11), each rendered as a two-digit prefix. */
 export const BASE_CELL_COUNT = 12;
@@ -99,8 +121,8 @@ function poleOnEdge(a, b) {
  * the other -- so the two have to be recognised by different signals.
  *
  * Neither signal is a distance threshold, deliberately: cells are ~2000 km wide
- * at resolution 1 and ~5 m at resolution 10, so no fixed tolerance separates
- * "on the pole" from "merely near it" across that range.
+ * at resolution 1 and under 4 m at resolution 15, so no fixed tolerance
+ * separates "on the pole" from "merely near it" across that range.
  */
 function findPoleEdge(ring, n) {
   const dl = [];
@@ -258,6 +280,164 @@ export function sphericalAreaKm2(ring) {
     total += (lon2 - lon1) * TO_R * (2 + Math.sin(lat1 * TO_R) + Math.sin(lat2 * TO_R));
   }
   return Math.abs((total * AUTHALIC_RADIUS_KM * AUTHALIC_RADIUS_KM) / 2);
+}
+
+/**
+ * Area of a lat/lon box on the authalic sphere, in square kilometres.
+ *
+ * The input is clamped first, deliberately. MapLibre's globe getBounds()
+ * returns UNWRAPPED longitudes (a viewport over Fiji reads west=171.9,
+ * east=187.1) and at very low zoom can report a span beyond 360 and latitudes
+ * beyond the poles. Left alone those inflate the area, which inflates the cell
+ * estimate, which flips the grid into disk mode with the whole globe in view.
+ */
+export function viewportAreaKm2(b) {
+  const south = Math.max(-90, Math.min(90, b.south));
+  const north = Math.max(-90, Math.min(90, b.north));
+  const lonSpan = Math.min(360, Math.abs(b.east - b.west));
+  const R = AUTHALIC_RADIUS_KM;
+  return Math.abs(R * R * lonSpan * TO_R * (Math.sin(north * TO_R) - Math.sin(south * TO_R)));
+}
+
+/**
+ * Would filling this viewport at this resolution need more than `cap` cells?
+ * True -> draw an anchored local disk instead of trying to tile the viewport.
+ *
+ * IMPORTANT: pass the PADDED bounds, the same box the viewport fill tests. The
+ * fill pads by 0.25 * latSpan on all four sides, so its target area is about 2x
+ * the raw viewport on a landscape desktop and about 3x on a portrait phone.
+ * Deciding the mode from raw bounds leaves a band below the boundary where the
+ * mode says "viewport" but the cap still binds -- and a cap-bound viewport fill
+ * is exactly the camera-tracking grid this exists to remove.
+ */
+export function diskMode(dggs, bounds, res, cap) {
+  return viewportAreaKm2(bounds) / dggs.cellAreaKM(res) > cap;
+}
+
+/**
+ * A local disk of cells around `seed`, grown outward one COMPLETE ring at a
+ * time, stopping before the ring that would breach `cap`.
+ *
+ * Complete rings, rather than cutting a breadth-first queue wherever the cap
+ * happens to fall, are what make the result look deliberate: the edge is a
+ * clean hexagon instead of a ragged frontier.
+ *
+ * Counts are measured, never assumed, because they depend on the seed. A
+ * hexagon-centred disk has rings of 6i and totals 1 + 3k(k+1), so a cap of 1400
+ * admits k=21 -> 1387 cells. A pentagon-centred disk has rings of 5i and totals
+ * 1 + 5k(k+1)/2, admitting k=23 -> 1381. Both hold at every resolution.
+ */
+export function diskCells(dggs, seed, res, cap) {
+  const seen = new Set([seed.toString()]);
+  const list = [seed];
+  let ring = [seed];
+  let k = 0;
+  for (;;) {
+    const next = [];
+    for (const cur of ring) {
+      let nbrs;
+      try {
+        nbrs = dggs.sequenceNumNeighbors([cur], res)[0] || [];
+      } catch {
+        continue;
+      }
+      for (const n of nbrs) {
+        // Absent neighbours come back as the UINT64_MAX sentinel, which is the
+        // one thing igeo7IsValid rejects. Unfiltered it would corrupt the ring
+        // counts, which are the whole basis of the disk being ring-complete.
+        if (!dggs.igeo7IsValid(dggs.sequenceNumToZ7(n, res))) continue;
+        const key = n.toString();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        next.push(n);
+      }
+    }
+    if (!next.length || list.length + next.length > cap) break;
+    list.push(...next);
+    ring = next;
+    k++;
+  }
+  return { list, k };
+}
+
+/**
+ * Must the grid be rebuilt, or does the current patch still serve?
+ *
+ * A patch is `{ mode, res, k, seedId, cells, count, fc }`. Returning false lets
+ * the caller skip a breadth-first fill and a polygon build, which is the whole
+ * win of anchoring: panning inside the disk costs nothing.
+ *
+ * Every clause is load-bearing:
+ *   - no patch: nothing to reuse. Also how the theme switch and the error path
+ *     force a rebuild, by clearing the ref.
+ *   - mode changed: a viewport draw overwrote the map source, so a disk patch
+ *     no longer describes what is on screen even if its cells still would.
+ *   - resolution changed: different cells entirely.
+ *
+ * Viewport mode always rebuilds, exactly as the explorer has always behaved.
+ *
+ * Note what is deliberately NOT here: the map centre. Panning does not re-seed
+ * a disk, at all, ever. An earlier version re-seeded once the centre left the
+ * disk, which sounds harmless but is not -- the disk simply jumped to wherever
+ * you had panned to, which is the same "the grid follows my camera" complaint
+ * in a coarser form. A disk is placed deliberately, by choosing a resolution or
+ * by clicking a cell, and then it stays on that ground until you place it again.
+ */
+export function needsReseed(patch, mode, res) {
+  if (!patch) return true;
+  if (patch.mode !== mode) return true;
+  if (patch.res !== res) return true;
+  return mode === "viewport";
+}
+
+/**
+ * What the map is currently showing, as one short string, published on the map
+ * container as `data-grid`.
+ *
+ * A disk is fully determined by its seed, its ring count and the resolution, so
+ * comparing this before and after a pan proves the drawn set did not move --
+ * without exposing the MapLibre instance on window or dumping 1387 cell ids.
+ */
+export function gridLabel(patch) {
+  if (!patch) return "none";
+  if (patch.mode === "disk") return `disk:${patch.seedId}:${patch.k}:${patch.count}`;
+  return `viewport:${patch.count}`;
+}
+
+/**
+ * The zoom at which a k-ring disk of the given resolution fills most of the
+ * map, so it can actually be seen.
+ *
+ * Needed because a disk shrinks by sqrt(7) per resolution step while the
+ * viewport does not: 1387 cells is about 140 km across at resolution 8 but only
+ * 20 km at resolution 10 and 150 m at resolution 15. Left alone at a
+ * continental zoom, a correct grid is a few pixels wide and looks like nothing
+ * was drawn at all.
+ *
+ * Used ONLY when the user changes resolution, never on pan or zoom, so the
+ * camera is never taken away mid-gesture.
+ */
+export function zoomForDisk(dggs, res, k, viewportPx, lat) {
+  const clsM = 2 * Math.sqrt((dggs.cellAreaKM(res) * 1e6) / Math.PI);
+  const diameterM = (2 * k + 1) * clsM;
+  const mPerPx = diameterM / (0.7 * viewportPx);
+  // 512px world again: MapLibre's metres per pixel is half the OSM figure.
+  const z = Math.log2((156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 / mPerPx);
+  return Math.max(0, Math.min(MAX_MAP_ZOOM, z));
+}
+
+/**
+ * Decimal places for echoing a cell centroid back into the coordinate inputs.
+ *
+ * Four places is about 11 m, fine while the ceiling was resolution 10 (cells
+ * 480 m across) but not at 14 and 15, where cells are 9.8 m and 3.7 m. There
+ * the rounded value lands in a neighbouring cell, so selecting a cell and
+ * pressing Locate walks you off it. Six places is about 0.11 m.
+ *
+ * Held at 4 through resolution 10 so nothing changes for the shipped range.
+ */
+export function coordPrecision(res) {
+  return res <= 10 ? 4 : 6;
 }
 
 /** Human-readable area: km2, dropping to m2 once cells get small. */

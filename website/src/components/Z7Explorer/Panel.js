@@ -50,7 +50,7 @@ export default function Panel({
               aria-label="resolution"
             />
             <div className={styles.ticks}>
-              <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
+              <span>0</span><span>5</span><span>10</span><span>15</span>
             </div>
           </div>
         </div>

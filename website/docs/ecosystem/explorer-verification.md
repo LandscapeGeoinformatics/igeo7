@@ -51,7 +51,7 @@ The built-in set covers the golden anchor, the lab's own location, the equator
 where authalic and geodetic latitude coincide, the antimeridian, both poles, and
 high and low latitudes in both hemispheres: Lisbon, Tartu, Null Island, Quito,
 Singapore, Auckland, Suva, Anchorage, Ushuaia, North Pole, South Pole. Each is
-evaluated at every resolution from 0 to 10, giving 121 cases.
+evaluated at every resolution from 0 to 15, giving 176 cases.
 
 Each case asserts four things:
 
@@ -63,6 +63,14 @@ Each case asserts four things:
 
 The fourth assertion is what pins the configuration. Without it the sweep only
 proves internal self-consistency, which a wrongly configured grid also has.
+
+Note carefully what each row proves. All 176 cases are checked for
+self-consistency, assertions 1 to 3. Only the Lisbon rows are additionally
+checked against an external oracle, and that table stops at resolution 10
+because the lab's pydggal source does. Resolutions 11 to 15 are therefore
+regression coverage of the newly exposed range, not conformance. Extending the
+expected-value table upward would need five more indices from an independent
+implementation.
 
 ### What the reference point can and cannot prove
 
@@ -93,7 +101,7 @@ prompted adding the expected-value assertions.
 
 ## Results
 
-**121 of 121 cases pass.**
+**176 of 176 cases pass.**
 
 The golden anchor supplied by the lab is Lisbon at 38.7223, -9.1393, which must
 give `0064156` / `0x0D0DDFFFFFFFFFFF` at resolution 5. It does, and the full
@@ -144,7 +152,7 @@ The maximum is 0.1283 degrees, at latitude 45.05. Kilometre figures use about
 This is smaller than a cell at coarse resolutions, so it is easy to miss, but
 from about resolution 6 it exceeds the cell size and the centroid no longer
 falls inside its own cell. The centroid round-trip check failed 29 of 121 cases
-before the inverse conversion was added, and passes 121 of 121 with it.
+before the inverse conversion was added, and passes 176 of 176 with it.
 
 Worth noting for anyone doing similar work: the golden anchor did not catch
 this, because a single point matching only exercises the geographic to cell

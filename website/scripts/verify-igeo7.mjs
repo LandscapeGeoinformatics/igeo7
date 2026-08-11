@@ -43,7 +43,12 @@ const DEFAULT_POINTS = [
   ["South Pole", -90.0, 0.0],
 ];
 
-// Expected Z7 indices for the lab's Lisbon reference point at every resolution.
+// Expected Z7 indices for the lab's Lisbon reference point, resolution 0 to 10.
+//
+// The table deliberately stops at 10, which is where the lab's pydggal source
+// stops. Resolutions 11 to 15 are still swept, but they can only be checked for
+// self-consistency (a cell's own centroid must resolve back to that cell), not
+// against an external oracle. Do not describe the 11..15 rows as conformance.
 // These are asserted, so the default run pins both mandatory IGEO7 settings
 // rather than only checking internal self-consistency.
 //

@@ -14,6 +14,14 @@
 import { Webdggrid } from "webdggrid";
 import {
   MAX_RES,
+  MAX_MAP_ZOOM,
+  zoomForCell,
+  viewportAreaKm2,
+  diskMode,
+  diskCells,
+  needsReseed,
+  gridLabel,
+  coordPrecision,
   densifyRing,
   childSeqs,
   parseZ7Input,
@@ -81,7 +89,7 @@ const REJECT = [
   ["008", "digit 8 wraps to 0"],
   ["0", "incomplete base cell"],
   ["  ", "whitespace only"],
-  ["0064156546301", "resolution 11 is above the explorer ceiling"],
+  ["006415654630111111", "resolution 16 is above the explorer ceiling"],
   ["0xFFFFFFFFFFFFFFFF", "the invalid sentinel"],
   ["0xZZ", "malformed hex"],
   ["-1", "negative"],
@@ -95,7 +103,11 @@ const ACCEPT = [
   ["00", 0, "00"],
   ["0064156", 5, "0064156"],
   [" 0064156 ", 5, "0064156"],
-  ["006415654630", MAX_RES, "006415654630"],
+  // Pinned to a LITERAL 10, not to MAX_RES. Pairing a fixed index with the
+  // symbolic ceiling made this fixture silently follow the constant while its
+  // input did not, so it broke the moment the ceiling moved.
+  ["006415654630", 10, "006415654630"],
+  ["00641565463065523", MAX_RES, "00641565463065523"],
   ["11454545454", 9, "11454545454"],
   ["0x0D0DDFFFFFFFFFFF", 5, "0064156"],
   ["0x0d0ddfffffffffff", 5, "0064156"],
@@ -160,8 +172,10 @@ for (const id of ["00", "000", "0000", "11", "114", "08"]) {
 
 // Children at the resolution ceiling are suppressed on purpose.
 {
-  const [seq] = seqOfId("006415654630");
-  check("no children offered at the resolution ceiling", childSeqs(dggs, seq, MAX_RES).length === 0);
+  const [seqCeil] = seqOfId("00641565463065523"); // a real res-15 cell
+  check("no children offered at the resolution ceiling", childSeqs(dggs, seqCeil, MAX_RES).length === 0);
+  const [seqBelow] = seqOfId("0064156546306552"); // res 14, one below
+  check("children are still offered one below the ceiling", childSeqs(dggs, seqBelow, MAX_RES - 1).length === 7);
 }
 
 // MAX_RES is this page's scope, not an engine limit. Record where the real
@@ -364,6 +378,204 @@ describe("Cell area");
 
 for (const [km2, want] of [[42498941, "42,498,941 km²"], [3034.84, "3,035 km²"], [8.848, "8.85 km²"], [0.18057, "180,570 m²"], [0, "-"]]) {
   check(`formatArea(${km2}) -> ${want}`, formatArea(km2) === want, `got ${formatArea(km2)}`);
+}
+
+// =========================================================================
+describe("Camera - zoomForCell");
+
+// MapLibre's zoom is 512px based (transform_helper.ts:159 sets _tileSize = 512),
+// so ground resolution is HALF the familiar 256px OSM figure at the same zoom
+// number. Getting this wrong understates every on-screen cell size by 2x.
+const mPerPx = (z, lat) => (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** z / 2;
+
+check("MAX_MAP_ZOOM matches MapLibre's default maxZoom", MAX_MAP_ZOOM === 22);
+check("zoomForCell never exceeds MAX_MAP_ZOOM", zoomForCell(20) <= MAX_MAP_ZOOM);
+{
+  let mono = true;
+  for (let r = 1; r <= MAX_RES; r++) if (zoomForCell(r) < zoomForCell(r - 1)) mono = false;
+  check("zoomForCell is monotonic in resolution", mono);
+  // The shipped formula was Math.min(16, 1.4*res + 2). Resolutions 0..10 must
+  // be bit-identical, or this silently moves the camera on what already works.
+  let same = true;
+  for (let r = 0; r <= 10; r++) if (zoomForCell(r) !== Math.min(16, 1.4 * r + 2)) same = false;
+  check("zoomForCell matches the shipped formula at res 0..10", same);
+}
+// The point of the change: res 13 and 15 were pinned at zoom 16, drawing cells
+// 28px and 4px across.
+for (const [r, minPx] of [[13, 200], [14, 200], [15, 100]]) {
+  const cls = 2 * Math.sqrt((dggs.cellAreaKM(r) * 1e6) / Math.PI);
+  const px = cls / mPerPx(zoomForCell(r), 38.7223);
+  check(`res ${r} cell is at least ${minPx}px at zoomForCell`, px >= minPx, `got ${Math.round(px)}px`);
+}
+
+// =========================================================================
+describe("Grid mode - viewport area and mode selection");
+{
+  const EARTH_KM2 = 4 * Math.PI * 6371.0072 ** 2;
+  const T = Math.PI / 180;
+  const want = 6371.0072 ** 2 * (10 * T) * (Math.sin(10 * T) - Math.sin(0));
+  const got = viewportAreaKm2({ south: 0, north: 10, west: 0, east: 10 });
+  check("viewportAreaKm2 matches the closed form for a 10x10 box", Math.abs(got / want - 1) < 1e-9, `got ${got}`);
+
+  const globe = { south: -90, north: 90, west: -180, east: 180 };
+  check("whole globe is the Earth's area", Math.abs(viewportAreaKm2(globe) / EARTH_KM2 - 1) < 1e-9);
+  check("longitude span above 360 clamps",
+    Math.abs(viewportAreaKm2({ south: -90, north: 90, west: -400, east: 400 }) / EARTH_KM2 - 1) < 1e-9);
+  check("latitudes past the poles clamp",
+    Math.abs(viewportAreaKm2({ south: -120, north: 120, west: -180, east: 180 }) / EARTH_KM2 - 1) < 1e-9);
+  check("unwrapped globe longitudes give the same area as wrapped",
+    Math.abs(viewportAreaKm2({ south: -10, north: 10, west: 171.9, east: 187.1 }) /
+             viewportAreaKm2({ south: -10, north: 10, west: -8.1, east: 7.1 }) - 1) < 1e-9);
+
+  check("res 2 over the whole globe is viewport mode", diskMode(dggs, globe, 2, 1400) === false);
+  check("res 8 over the whole globe is disk mode", diskMode(dggs, globe, 8, 1400) === true);
+  const tiny = { south: 38.71, north: 38.73, west: -9.15, east: -9.13 };
+  check("res 5 over a 2km box is viewport mode", diskMode(dggs, tiny, 5, 1400) === false);
+  check("res 15 over a 2km box is disk mode", diskMode(dggs, tiny, 15, 1400) === true);
+}
+
+// =========================================================================
+describe("Grid mode - the anchored disk");
+
+// A pentagon CANNOT be found by geocoding. geoToSequenceNum(11.2, 58.28252559)
+// returns hexagon 0000000631 at res 8, because POLE_LAT is an AUTHALIC latitude
+// and, read as geodetic, lands about 12.7 km south of the icosahedron vertex.
+// Build the pentagon by index instead: all-zero digits.
+function pentagonSeq(r) {
+  const base = dggs.igeo7GetBaseCell(dggs.igeo7FromString("00"));
+  const arr = new Array(r).fill(0);
+  while (arr.length < 20) arr.push(7);
+  return dggs.z7ToSequenceNum(dggs.igeo7Encode(base, arr), r);
+}
+
+for (const r of [8, 13, 15]) {
+  const hex = dggs.geoToSequenceNum([[-9.1393, dggs.igeo7GeoToAuthalic(38.7223)]], r)[0];
+  check(`res ${r} hexagon seed really has 6 neighbours`, nbrsOf(hex, r).length === 6);
+  const h = diskCells(dggs, hex, r, 1400);
+  check(`res ${r} hexagon disk is k=21, 1387 cells`, h.k === 21 && h.list.length === 1387, `k=${h.k} n=${h.list.length}`);
+  check(`res ${r} hexagon disk matches 1 + 3k(k+1)`, h.list.length === 1 + 3 * h.k * (h.k + 1));
+  check(`res ${r} hexagon disk is within the cap`, h.list.length <= 1400);
+  check(`res ${r} hexagon disk k is maximal`, 1 + 3 * (h.k + 1) * (h.k + 2) > 1400);
+  check(`res ${r} hexagon disk has no duplicates`, new Set(h.list.map(String)).size === h.list.length);
+
+  const pent = pentagonSeq(r);
+  check(`res ${r} pentagon seed really has 5 neighbours`, nbrsOf(pent, r).length === 5, `got ${nbrsOf(pent, r).length}`);
+  const p = diskCells(dggs, pent, r, 1400);
+  check(`res ${r} pentagon disk is k=23, 1381 cells`, p.k === 23 && p.list.length === 1381, `k=${p.k} n=${p.list.length}`);
+  check(`res ${r} pentagon disk matches 1 + 5k(k+1)/2`, p.list.length === 1 + (5 * p.k * (p.k + 1)) / 2);
+  check(`res ${r} pentagon disk is within the cap`, p.list.length <= 1400);
+}
+{
+  const s = dggs.geoToSequenceNum([[-9.1393, dggs.igeo7GeoToAuthalic(38.7223)]], 8)[0];
+  const d = diskCells(dggs, s, 8, 3);
+  check("a cap below the first ring returns the seed alone", d.k === 0 && d.list.length === 1);
+}
+
+// =========================================================================
+describe("Grid mode - reseed predicate and label");
+{
+  const fake = (over = {}) => ({
+    mode: "disk", res: 8, k: 21, seedId: "0064156546",
+    cells: new Set(["100", "200", "300"]), count: 1387, fc: null, ...over,
+  });
+  check("no patch always reseeds", needsReseed(null, "disk", 8) === true);
+  check("a resolution change reseeds", needsReseed(fake(), "disk", 9) === true);
+  // THE POINT: panning must never move a disk. The predicate does not take the
+  // map centre at all, so there is no way for a pan to reach it. An earlier
+  // version reseeded once the centre left the disk, which just made the disk
+  // jump to wherever you had panned to -- the same complaint in coarser form.
+  check("an unchanged disk is never rebuilt, wherever the camera goes",
+    needsReseed(fake(), "disk", 8) === false);
+  check("needsReseed takes no camera position", needsReseed.length === 3);
+  // The staleness traps. Without these, an implementation that blanks the map
+  // on a theme switch passes every other check in this file.
+  check("returning to disk after a viewport draw reseeds",
+    needsReseed(fake({ mode: "viewport" }), "disk", 8) === true);
+  check("viewport mode always redraws, as it does today",
+    needsReseed(fake({ mode: "viewport" }), "viewport", 8) === true);
+
+  check("disk label carries mode, seed, rings and count", gridLabel(fake()) === "disk:0064156546:21:1387");
+  check("viewport label carries mode and count", gridLabel(fake({ mode: "viewport", count: 577 })) === "viewport:577");
+  check("a missing patch labels as none", gridLabel(null) === "none");
+}
+
+// =========================================================================
+describe("Panel - coordinate echo precision");
+
+// The panel echoes a selected cell's centroid into the Locate inputs. Rounded
+// more coarsely than the cell is wide, pressing Locate moves you to a neighbour.
+for (const r of [10, 13, 14, 15]) {
+  let wrong = 0;
+  for (let i = 0; i < 60; i++) {
+    const lat = -70 + (140 * i) / 59;
+    const lon = -175 + (350 * i) / 59;
+    const seq = dggs.geoToSequenceNum([[lon, dggs.igeo7GeoToAuthalic(lat)]], r)[0];
+    const [clon, alat] = dggs.sequenceNumToGeo([seq], r)[0];
+    const clat = dggs.igeo7AuthalicToGeo(alat);
+    const p = coordPrecision(r);
+    const back = dggs.geoToSequenceNum(
+      [[Number(clon.toFixed(p)), dggs.igeo7GeoToAuthalic(Number(clat.toFixed(p)))]], r
+    )[0];
+    if (back !== seq) wrong++;
+  }
+  check(`res ${r}: the echoed centroid still selects its own cell`, wrong === 0, `${wrong}/60 wrong`);
+}
+check("precision is unchanged for the resolutions that already shipped", coordPrecision(10) === 4);
+check("precision increases above the old ceiling", coordPrecision(15) > 4);
+
+// =========================================================================
+describe("Selection - the resolution slider must not walk the selection away");
+
+// Dragging the slider re-resolves the selection. Re-resolving the CELL CENTROID
+// chases a moving target: a coarse cell's centre can be hundreds of km from the
+// point the user actually picked, and every step compounds it. Re-resolving the
+// user's ORIGINAL point is stable by construction. Measured before the fix:
+// selecting Tartu at resolution 0 and dragging to 9 landed 906 km away on the
+// icosahedron vertex, and from resolution 2 it landed 202 km away in the Gulf
+// of Finland as cell 00010000000.
+{
+  const cellAt = (lat, lon, r) => dggs.geoToSequenceNum([[lon, dggs.igeo7GeoToAuthalic(lat)]], r)[0];
+  const geoOfSeq = (s, r) => {
+    const [lo, a] = dggs.sequenceNumToGeo([s], r)[0];
+    return [lo, dggs.igeo7AuthalicToGeo(a)];
+  };
+  const kmApart = (aLat, aLon, bLat, bLon) =>
+    Math.hypot((bLat - aLat) * 111.32, (bLon - aLon) * 111.32 * Math.cos((aLat * Math.PI) / 180));
+
+  for (const [name, LAT, LON] of [["Tartu", 58.3806, 26.7205], ["Lisbon", 38.7223, -9.1393]]) {
+    for (const start of [0, 2, 5]) {
+      // The FIXED behaviour: always re-resolve the user's own point.
+      let seq = cellAt(LAT, LON, start);
+      for (let r = start + 1; r <= MAX_RES; r++) seq = cellAt(LAT, LON, r);
+      const [lon, lat] = geoOfSeq(seq, MAX_RES);
+      const drift = kmApart(LAT, LON, lat, lon);
+      // A res-15 cell is 3.7 m across, so the centroid is within metres.
+      check(
+        `${name}: sliding res ${start} -> ${MAX_RES} stays put (${drift * 1000 < 50 ? "<50 m" : drift.toFixed(1) + " km"})`,
+        drift < 0.05,
+        `drifted ${drift.toFixed(1)} km`
+      );
+
+      // And prove the OLD centroid-chasing approach really was broken, so this
+      // test fails loudly if anyone reinstates it.
+      let bad = cellAt(LAT, LON, start);
+      let br = start;
+      for (let r = start + 1; r <= MAX_RES; r++) {
+        const [blon, blat] = geoOfSeq(bad, br);
+        bad = cellAt(blat, blon, r);
+        br = r;
+      }
+      const [blon2, blat2] = geoOfSeq(bad, MAX_RES);
+      const badDrift = kmApart(LAT, LON, blat2, blon2);
+      if (start <= 2) {
+        check(
+          `${name}: centroid-chasing from res ${start} really does drift (${badDrift.toFixed(0)} km)`,
+          badDrift > 10,
+          `only ${badDrift.toFixed(1)} km`
+        );
+      }
+    }
+  }
 }
 
 // =========================================================================

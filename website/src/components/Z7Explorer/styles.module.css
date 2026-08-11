@@ -66,12 +66,22 @@
   z-index: 2;
   background: rgba(0, 0, 0, 0.62);
   color: #fff;
-  padding: 0.2rem 0.6rem;
-  border-radius: 20px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 12px;
   font-size: 0.88rem;
   font-family: var(--ifm-font-family-monospace);
   border: 1px solid rgba(255, 255, 255, 0.18);
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+/* Only present in disk mode, where the grid is a local sample rather than the
+   whole viewport. Without it a local disk is indistinguishable from a bug. */
+.resBadgeSub {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  white-space: nowrap;
 }
 
 .panel {
