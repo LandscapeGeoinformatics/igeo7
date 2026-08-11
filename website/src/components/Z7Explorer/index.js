@@ -38,7 +38,8 @@ const CELL_CAP = 1400; // ceiling for both the viewport fill and the anchored di
 // NOT the same as the "Tartu" test point in scripts/verify-igeo7.mjs, which is
 // the city centre a few hundred metres away.
 const LISBON = { lat: 38.7223, lon: -9.1393 };
-const TARTU_UNIVERSITY = { lat: 58.3806, lon: 26.7205 };
+// 58.3735527,26.7153103
+const TARTU_UNIVERSITY = { lat: 58.3735527, lon: 26.7153103 }; 
 
 function basemapStyle(dark) {
   const variant = dark ? "dark_all" : "light_all";
