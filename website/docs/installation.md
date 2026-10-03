@@ -45,8 +45,12 @@ sudo make install   # installs to /usr/local/bin/dggrid
 Verify the installation:
 
 ```bash
-dggrid --version
+dggrid -v     # DGGRID version 8.44 released December 1, 2025
 ```
+
+:::note DGGRID version
+IGEO7 needs a recent DGGRID: **8.43 or newer** (conda-forge currently ships 8.44). DGGRID 9 is already in beta; it only supports the `HIERNDX` form of Z7 addressing, which is what this documentation uses (`Z7` / `Z7_STRING` are marked deprecated in 8.44).
+:::
 
 ### Setting the path
 
@@ -75,6 +79,7 @@ pip install dggrid4py
 | `shapely` | Geometry objects (polygons, points) |
 | `pandas` | Tabular data |
 | `numpy` | Array operations |
+| `pygeodesy` | Authalic latitude conversion (`dggrid4py.auxlat`) |
 
 All are installed automatically.
 
@@ -90,9 +95,9 @@ pip install dggal
 
 ```python
 import os
-from dggrid4py import DGGRIDv8
+from dggrid4py import DGGRIDv8   # use DGGRIDv8 for IGEO7, not DGGRIDv7
 
-dggrid = DGGRIDv7(
+dggrid = DGGRIDv8(
     executable=os.environ.get("DGGRID_PATH", "/usr/local/bin/dggrid"),
     working_dir="/tmp",
     capture_logs=True,
@@ -107,11 +112,11 @@ print(df)
 Expected output (truncated):
 
 ```
-   Resolution  # Cells     Area (km^2)
-0           0       12  51006562.172409
-1           1       72   7286651.738916
+   Resolution   Cells   Area (km^2)     CLS (km)
+0           0      12  5.100656e+07  8199.500370
+1           1      72  7.286652e+06  3053.223243
 ...
-5           5   168072      3034.840374
+5           5  168072  3.034840e+03    62.161776
 ```
 
 :::tip Working directory

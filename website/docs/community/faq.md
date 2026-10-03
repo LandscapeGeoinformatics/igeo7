@@ -38,7 +38,7 @@ By Euler's formula for convex polyhedra, any tiling of a sphere using hexagons r
 
 ### What are the authalic latitudes and do I need to worry about them?
 
-DGGRID uses authalic latitudes internally to implement the ISEA equal-area projection on the WGS84 ellipsoid. You **do not** need to handle this — dggrid4py passes standard WGS84 lat/lng and DGGRID converts internally. It is only relevant if you are implementing the ISEA projection from scratch. See [ISEA Projection](../concepts/isea-projection).
+DGGRID builds the grid on an authalic sphere, and the DGGRID tool currently does not apply the authalic conversion yet. That is why you still have to do it explicitly in dggrid4py: convert WGS84 input with `geoseries_to_authalic` and DGGRID's output geometries with `geoseries_to_geodetic`, both in `dggrid4py.auxlat`. Skipping the conversion puts points into the wrong cell. DGGRID v9 (already in beta) will have an option to do it, and DGGAL applies it automatically. See [ISEA Projection](../concepts/isea-projection) and the [Quickstart](../quickstart).
 
 ### Why does my Z7 hex index end in `ffffffff`?
 
@@ -53,8 +53,8 @@ Yes. Store as:
 
 The Z7 string's prefix property makes hierarchical queries efficient with a standard B-tree index:
 ```sql
--- All resolution-9 descendants of resolution-5 cell "0800433"
-SELECT * FROM observations WHERE cell_id LIKE '0800433%';
+-- All resolution-9 descendants of resolution-5 cell "0001022"
+SELECT * FROM observations WHERE cell_id LIKE '0001022%';
 ```
 
 ---

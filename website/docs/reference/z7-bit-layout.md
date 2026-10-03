@@ -52,7 +52,7 @@ Binary: 0000 000 001 000 010 101 010 101 101 001 111 111 111 111 111 111 111 111
 
 - **Base cell:** `0000₂` = 0
 - **Resolution:** 9 (digits 1–9 are valid, digit 10 onward = 7)
-- **Z7 string:** `"090625251"` → base cell `09`, then digits `0`, `1`, `0`, `2`, `5`, `2`, `5`, `5`, `1`
+- **Z7 string:** `"00010252551"` → base cell `00`, then digits `0`, `1`, `0`, `2`, `5`, `2`, `5`, `5`, `1`
 
 :::note Why 4 bits for base cell?
 4 bits can represent 0–15, but only values 0–11 are used (12 icosahedral vertices). Values 12–15 are reserved.

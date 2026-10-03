@@ -13,10 +13,8 @@
 /**
  * Icosahedron orientation longitude, in degrees. CHANGE THE GRID HERE.
  *
- * This is the IGEO7 setting. DGGRID's default is 11.25, and the two are
- * indistinguishable through resolution 5 -- they first diverge at resolution 6,
- * where 11.25 puts Lisbon in 00641542 instead of 00641565. So a resolution-5
- * test point cannot tell them apart; only resolution 6 or deeper can.
+ * This is the IGEO7 setting. In the DGGRID v8 series the IGEO7 type still uses
+ * ISEA7H's preset of 11.25, so 11.2 has to be set explicitly.
  */
 export const ORIENTATION_LON = 11.2;
 

@@ -53,33 +53,33 @@ Pentagons are an exception: they have 6 children (1 centre + 5 surrounding), sin
 
 ## Reading a Z7 Index
 
-The Z7 string format `"0800433"` decodes as:
+The Z7 string format `"0001022"` decodes as:
 
 | Part | Value | Meaning |
 |---|---|---|
-| `08` | base cell 8 | one of the 12 icosahedron vertices |
+| `00` | base cell 0 | one of the 12 icosahedron vertices |
 | `0` | digit 1 = 0 | centre child at resolution 1 |
-| `0` | digit 2 = 0 | centre child at resolution 2 |
-| `4` | digit 3 = 4 | child 4 at resolution 3 |
-| `3` | digit 4 = 3 | child 3 at resolution 4 |
-| `3` | digit 5 = 3 | child 3 at resolution 5 |
+| `1` | digit 2 = 1 | child 1 at resolution 2 |
+| `0` | digit 3 = 0 | centre child at resolution 3 |
+| `2` | digit 4 = 2 | child 2 at resolution 4 |
+| `2` | digit 5 = 2 | child 2 at resolution 5 |
 
-This cell is at **resolution 5** (5 valid digits after the base cell).
+This cell is at **resolution 5** (5 valid digits after the base cell). It is the cell that contains Tartu, Estonia.
 
 ## Parent–Child Relationships
 
 **Parent:** remove the last digit.
 
 ```python
-z7_str = "0800433"
-parent  = z7_str[:-1]   # "080043"  (resolution 4)
+z7_str = "0001022"
+parent  = z7_str[:-1]   # "000102"  (resolution 4)
 ```
 
 **Children:** append digits 0–6.
 
 ```python
 children = [z7_str + str(d) for d in range(7)]
-# ["08004330", "08004331", ..., "08004336"]
+# ["00010220", "00010221", ..., "00010226"]
 ```
 
 This works identically on the integer representation via bit operations:
@@ -106,7 +106,7 @@ The Z7 index order is not arbitrary — it defines a **space-filling curve** ove
 
 The digit `0` always means "the child that contains the parent's centroid". This is a consistent orientation anchor: no matter which base cell or resolution you're at, digit `0` is always the spatial centre.
 
-This means the **path of all-zero digits** (e.g., `"080000...0"`) traces a straight line from the icosahedron vertex down to the finest resolution, always staying at the centre of each parent cell.
+This means the **path of all-zero digits** (e.g., `"000000...0"`) traces a straight line from the icosahedron vertex down to the finest resolution, always staying at the centre of each parent cell.
 
 ## Comparison with H3 Indexing
 

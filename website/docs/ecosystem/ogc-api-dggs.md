@@ -36,7 +36,7 @@ Zone address format:   Z7_STRING
 A request for data at a specific IGEO7 cell looks like:
 
 ```
-GET /dggs/IGEO7/zones/0900264253
+GET /dggs/IGEO7/zones/00010224545
 ```
 
 ## pydggsapi: IGEO7-Native Implementation

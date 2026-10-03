@@ -21,19 +21,22 @@ findResolutionByCLS(target_m, prefer?) → int
 | `target_m` | float | Target cell diameter in metres |
 | `prefer` | `"closest"` \| `"finer"` \| `"coarser"` | Strategy when target falls between levels |
 
-### Python — IGEO7.jl port in dggrid4py
+### Python — dggrid4py
 
-The resolution lookup is available in `dggrid4py` via the `igeo7_ext` module, or can be implemented directly from the precomputed stats table:
+dggrid4py has no dedicated lookup function. Use the resolution table from the experimental `igeo7_ext` module (`dggrid` as in the [API Overview](./overview#initialising-dggridv8)):
 
 ```python
-from dggrid4py.igeo7_ext import find_resolution_by_cls_m
+from dggrid4py import igeo7_ext
+
+# resolution table, indexed by resolution; ISEA7H has the same cells as IGEO7
+stats = igeo7_ext.dggrid_get_res(dggrid, "ISEA7H", 20)
 
 # Find resolution closest to 1 km cell diameter
-res = find_resolution_by_cls_m(1000)
+res = (stats["cls_m"] - 1000).abs().idxmin()
 print(res)   # 9  (CLS = 1268.6 m)
 
-# Find the finest resolution with CLS >= 10 m (prefer coarser)
-res = find_resolution_by_cls_m(10, prefer="coarser")
+# Find resolution closest to 10 m cell diameter
+res = (stats["cls_m"] - 10).abs().idxmin()
 print(res)   # 14  (CLS = 9.8 m)
 ```
 
@@ -60,10 +63,8 @@ findResolutionByArea(target_m2, prefer?) → int
 ### Python
 
 ```python
-from dggrid4py.igeo7_ext import find_resolution_by_area_m2
-
-# Resolution closest to 1 km² cell area
-res = find_resolution_by_area_m2(1e6)
+# Resolution closest to 1 km² cell area (stats table as above)
+res = (stats["average_hexagon_area_m2"] - 1e6).abs().idxmin()
 print(res)   # 9  (area = 1,263,990 m²)
 ```
 
@@ -86,12 +87,10 @@ getResolutionStats(resolution) → {num_cells, area_km2, area_m2, cls_km, cls_m}
 ### Python
 
 ```python
-from dggrid4py.igeo7_ext import get_resolution_stats
-
-stats = get_resolution_stats(9)
-print(stats)
-# {'num_cells': 403536072, 'area_km2': 1.2639902,
-#  'area_m2': 1263990.2, 'cls_km': 1.2686064, 'cls_m': 1268.6064}
+# One row of the stats table (as above)
+print(stats.loc[9].to_dict())
+# {'cells': 403536072.0, 'average_hexagon_area_km2': 1.2639902, 'cls_km': 1.2686064,
+#  'average_hexagon_area_m2': 1263990.25, 'cls_m': 1268.6064}
 ```
 
 ### Julia

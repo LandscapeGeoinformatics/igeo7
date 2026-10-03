@@ -22,13 +22,13 @@ The ISEA projection is a two-step process:
 
 1. **Sphere → Icosahedron face**: Each point on the sphere is mapped to the nearest icosahedral face using an equal-area azimuthal projection centred on that face. The Snyder equal-area projection ensures that the area of any region on the sphere equals the area of its projection on the face.
 
-2. **Face → 2D plane**: The 20 triangular faces can then be unfolded into a flat map. IGEO7 uses a specific orientation (the standard ISEA orientation) that minimises vertices on land.
+2. **Face → 2D plane**: The 20 triangular faces can then be unfolded into a flat map. IGEO7 uses a specific orientation (the ISEA orientation with vertex 0 at 11.2°E, see below) that minimises vertices on land.
 
 The result: any two cells at the same resolution have **exactly the same area**.
 
 ## Authalic Latitude
 
-DGGRID implements ISEA using **authalic latitudes** internally. The authalic latitude $\beta$ of a point at geodetic latitude $\phi$ on the WGS84 ellipsoid is defined as:
+DGGRID implements ISEA on an **authalic sphere**. To use the grid on the WGS84 ellipsoid, geodetic latitudes are converted to **authalic latitudes**. The authalic latitude $\beta$ of a point at geodetic latitude $\phi$ on the WGS84 ellipsoid is defined as:
 
 $$
 \sin\beta = \frac{q(\phi)}{q_p}
@@ -42,26 +42,31 @@ $$
 
 and $q_p = q(\pi/2)$, $e$ is the WGS84 eccentricity ($e \approx 0.0818$).
 
-Authalic latitude preserves area relationships between parallels. DGGRID converts geodetic coordinates to authalic coordinates before applying the ISEA projection, ensuring the equal-area property holds with respect to the real Earth shape, not just a sphere.
+Authalic latitude preserves area relationships between parallels. Converting geodetic coordinates to authalic coordinates before the ISEA projection is applied ensures the equal-area property holds with respect to the real Earth shape, not just a sphere.
 
-:::note Interoperability
-When working with WGS84 lat/lng coordinates (GPS, GeoJSON), DGGRID handles the authalic conversion automatically. You pass standard geographic coordinates in and get Z7 cell IDs out. The conversion is internal.
+:::caution The conversion is explicit for now
+The DGGRID tool currently does not apply the authalic conversion yet, which is why it still has to be done explicitly in dggrid4py: convert inputs with `geoseries_to_authalic` and outputs with `geoseries_to_geodetic` from `dggrid4py.auxlat` (see [dggrid4py](../ecosystem/dggrid4py)). Skipping it shifts latitudes by up to about 0.13 degrees, which puts points into the wrong cell. DGGRID v9 (already in beta) will have an option to do the conversion. DGGAL applies it automatically for `ISEA7H_Z7`.
 :::
 
 ## IGEO7 Icosahedron Orientation
 
-IGEO7 uses the standard ISEA orientation, defined by:
+IGEO7 uses the ISEA orientation with vertex 0 at longitude 11.20, defined by:
 
 ```
-dggs_vert0_lon     11.25
-dggs_vert0_lat     58.2825255885
+dggs_vert0_lon      11.20
+dggs_vert0_lat      58.28252559
 dggs_vert0_azimuth  0.0
 ```
 
 This places one icosahedron vertex near 58°N, 11°E (southern Scandinavia), which:
 - Avoids placing vertices on densely populated land
 - Maintains north–south symmetry for the grid
-- Is the same orientation used by DGGAL and dggrid4py by default
+
+The latitude is an authalic latitude; in WGS84 that vertex is at 58.3971°N.
+
+:::caution Set 11.20 explicitly with DGGRID v8
+In the DGGRID v8 series, the `IGEO7` type still uses ISEA7H's preset of `dggs_vert0_lon 11.25`, so 11.20 has to be set explicitly (see [DGGRID](../ecosystem/dggrid#igeo7-orientation)). This will hopefully be fixed in the near future (DGGRID v9, already in beta). DGGAL's `ISEA7H_Z7` uses 11.2 already.
+:::
 
 ## Area Comparison: IGEO7 vs H3
 

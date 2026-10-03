@@ -25,20 +25,22 @@ polygonToCells(polygon, resolution) → list[cell_id]
 
 ### Python — dggrid4py
 
+With `dggrid`, `IGEO7_META` and the `auxlat` functions from the [API Overview](./overview#initialising-dggridv8):
+
 ```python
 import shapely.geometry
-from dggrid4py import DGGRIDv7
-
-dggrid = DGGRIDv7(executable="/usr/local/bin/dggrid", working_dir="/tmp")
 
 # Fill a bounding box
 bbox = shapely.geometry.box(20.2, 57.0, 28.4, 60.0)   # Estonia
 
+# WGS84 → authalic sphere before the polygon goes to DGGRID
+bbox_authalic = geoseries_to_authalic(gpd.GeoSeries([bbox], crs=4326)).iloc[0]
+
 gdf = dggrid.grid_cellids_for_extent(
     dggs_type="IGEO7",
     resolution=9,
-    clip_geom=bbox,
-    output_address_type="Z7_STRING",
+    clip_geom=bbox_authalic,
+    **IGEO7_META,
 )
 cell_ids = gdf.iloc[:, 0].tolist()
 print(f"{len(cell_ids)} cells at resolution 9")
@@ -49,13 +51,14 @@ For arbitrary polygon shapes (not just bounding boxes):
 ```python
 import geopandas as gpd
 
-estonia = gpd.read_file("estonia.gpkg").geometry.iloc[0]
+estonia = gpd.read_file("estonia.gpkg").to_crs(4326).geometry
+estonia_authalic = geoseries_to_authalic(estonia).iloc[0]
 
 gdf = dggrid.grid_cellids_for_extent(
     dggs_type="IGEO7",
     resolution=9,
-    clip_geom=estonia,
-    output_address_type="Z7_STRING",
+    clip_geom=estonia_authalic,
+    **IGEO7_META,
 )
 ```
 
@@ -76,16 +79,16 @@ cellsToGeometry(cell_ids, resolution) → GeoDataFrame
 ### Python — dggrid4py
 
 ```python
-cell_ids = ["0900264", "0900265", "0900266"]
+cell_ids = ["00010224545", "00010224540", "00010224541"]   # all resolution 9
 
 gdf = dggrid.grid_cell_polygons_from_cellids(
     cell_id_list=cell_ids,
     dggs_type="IGEO7",
     resolution=9,
-    input_address_type="Z7_STRING",
-    output_address_type="Z7_STRING",
+    **IGEO7_META,
 )
-print(gdf[["global_id", "geometry"]])
+gdf["geometry"] = geoseries_to_geodetic(gdf.geometry)   # authalic sphere → WGS84
+print(gdf[["name", "geometry"]])
 ```
 
 To get the **union** of all cells as a single polygon (equivalent to H3's `cellsToPolygon`):
@@ -110,14 +113,17 @@ This combines `polygonToCells` and `cellsToGeometry` in one call.
 
 ```python
 extent = shapely.geometry.box(24.5, 59.3, 25.2, 59.6)  # Tallinn
+extent_authalic = geoseries_to_authalic(gpd.GeoSeries([extent], crs=4326)).iloc[0]
 
 gdf = dggrid.grid_cell_polygons_for_extent(
     dggs_type="IGEO7",
     resolution=11,
-    clip_geom=extent,
-    output_address_type="Z7_STRING",
+    clip_geom=extent_authalic,
+    **IGEO7_META,
 )
-# Returns GeoDataFrame with columns: global_id, geometry
+gdf["geometry"] = geoseries_to_geodetic(gdf.geometry)
+gdf = gdf.set_crs(4326, allow_override=True)
+# Returns GeoDataFrame with columns: name, geometry
 gdf.to_file("tallinn_igeo7_r11.gpkg")
 ```
 
@@ -129,7 +135,9 @@ gdf_global = dggrid.grid_cell_polygons_for_extent(
     resolution=3,
     clip_geom=None,      # no clip = global
     split_dateline=True,
+    **IGEO7_META,
 )
+gdf_global["geometry"] = geoseries_to_geodetic(gdf_global.geometry)
 ```
 
 ---
@@ -147,23 +155,26 @@ Useful for converting between Z7 string, Z7 hex, Q2DI, PROJTRI, and SEQNUM forma
 ### Python — dggrid4py
 
 ```python
-cell_ids = gdf["global_id"].values
+cell_ids = ["0001250", "0001254", "0001240"]   # all resolution 5
 
-# Z7_STRING → Q2DI (quad/diamond index)
+# keep the Z7 input and orientation settings, replace the output address type
+meta_in = {k: v for k, v in IGEO7_META.items() if not k.startswith("output_")}
+
+# Z7 string → Q2DI (quad/diamond index)
 df_q2di = dggrid.address_transform(
     cell_ids,
     dggs_type="IGEO7",
     resolution=5,
-    input_address_type="Z7_STRING",
     output_address_type="Q2DI",
+    **meta_in,
 )
 
-# Z7_STRING → PROJTRI (projected triangle coordinates)
+# Z7 string → PROJTRI (projected triangle coordinates)
 df_tri = dggrid.address_transform(
     cell_ids,
     dggs_type="IGEO7",
     resolution=5,
-    input_address_type="Z7_STRING",
     output_address_type="PROJTRI",
+    **meta_in,
 )
 ```

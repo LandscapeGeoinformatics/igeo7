@@ -80,19 +80,10 @@ value certifies.
 The reference index `0064156` at resolution 5 **does** prove the authalic
 conversion is applied: feeding raw geodetic latitude instead yields `0064154`.
 
-It does **not** prove the 11.2 orientation. Resolutions 0 to 5 are identical
-under 11.2 and under DGGRID's default 11.25. The two first diverge at
-resolution 6:
-
-| Orientation | Resolution 5 | Resolution 6 |
-|---|---|---|
-| 11.2 (IGEO7) | `0064156` | `00641565` |
-| 11.25 (DGGRID default) | `0064156` | `00641542` |
-
-So the orientation is only pinned by the resolution 6 and deeper rows, which is
-why the expected table runs to resolution 10 rather than stopping at the anchor.
-Any additional test points intended to confirm the orientation need to be at
-resolution 6 or deeper to be meaningful.
+On its own it does **not** pin the 11.2 orientation: that single anchor value
+is the same with DGGRID's default orientation. The orientation is pinned by the
+finer rows of the expected table, which is why the table runs to resolution 10
+rather than stopping at the anchor.
 
 Both assertions were confirmed by mutation testing: setting the orientation to
 11.25, or removing the authalic conversions, each makes the harness fail. An

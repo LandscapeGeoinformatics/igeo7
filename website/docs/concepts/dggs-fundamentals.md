@@ -34,11 +34,11 @@ All modern hexagonal DGGS start from an **icosahedron** — the Platonic solid w
 
 ![Icosahedron projected onto the sphere](/images/lei2020_icosahedron.png)
 
-The icosahedron is the best approximation of a sphere among Platonic solids: it minimises angular and area distortion when its faces are unfolded and subdivided. IGEO7 uses the standard ISEA orientation, which:
+The icosahedron is the best approximation of a sphere among Platonic solids: it minimises angular and area distortion when its faces are unfolded and subdivided. IGEO7 uses the ISEA orientation with vertex 0 at 11.2°E (see [ISEA Projection](./isea-projection#igeo7-icosahedron-orientation)), which:
 
 - Minimises the number of vertices (icosahedron corners) falling on land
 - Is symmetric across the equator
-- Places one vertex near the North Pole and one near the South Pole
+- Places no vertex on a pole: vertex 0 lies near 58°N, 11°E, and its antipode near 58°S
 
 The 12 vertices of the icosahedron become the **12 pentagonal base cells** of IGEO7.
 

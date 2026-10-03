@@ -25,7 +25,7 @@ from dggrid4py import igeo7
 res = igeo7.get_z7hex_resolution("0042aad3ffffffff")   # 9
 
 # From Z7 string
-res = igeo7.get_z7string_resolution("0800433")          # 5
+res = igeo7.get_z7string_resolution("0001022")          # 5
 ```
 
 Resolution is the count of valid digits (values 0–6) before the first sentinel (`7`). For the Z7 string format it is simply `len(z7_string) - 2`.
@@ -34,7 +34,7 @@ Resolution is the count of valid digits (values 0–6) before the first sentinel
 
 ```julia
 using IGEO7
-idx = z7string_to_index("0800433")
+idx = z7string_to_index("0001022")
 get_resolution(idx)   # 5
 ```
 
@@ -59,16 +59,16 @@ base_cell, digits = igeo7.decode_z7hex_index("0042aad3ffffffff")
 print(base_cell)   # 0
 
 # From Z7 string: first two characters
-z7_str = "0800433"
-base_cell = int(z7_str[:2])   # 8
+z7_str = "0001022"
+base_cell = int(z7_str[:2])   # 0
 ```
 
 ### Julia
 
 ```julia
 using IGEO7
-idx = z7string_to_index("0800433")
-get_base_cell(idx)   # 0x08 (UInt8)
+idx = z7string_to_index("0001022")
+get_base_cell(idx)   # 0x00 (UInt8)
 ```
 
 ---
@@ -93,8 +93,8 @@ print(valid)   # [0, 1, 0, 2, 5, 2, 5, 5, 1]  (9 digits → resolution 9)
 
 ```julia
 using IGEO7
-idx = z7string_to_index("0800433")
-get_digits(idx)   # (0, 0, 4, 3, 3, 7, 7, 7, ..., 7) — tuple of 20
+idx = z7string_to_index("0001022")
+get_digits(idx)   # (0, 1, 0, 2, 2, 7, 7, 7, ..., 7) — tuple of 20
 ```
 
 ---
@@ -152,15 +152,15 @@ def is_pentagon(z7_str: str) -> bool:
     # Pentagon cells have only digit '0' after the base cell
     return all(c == '0' for c in z7_str[2:])
 
-print(is_pentagon("0800000"))   # True  — resolution 5 pentagon
-print(is_pentagon("0800433"))   # False — regular hexagon
+print(is_pentagon("0000000"))   # True  — resolution 5 pentagon
+print(is_pentagon("0001022"))   # False — regular hexagon
 ```
 
 ### Julia
 
 ```julia
 using IGEO7
-idx = z7string_to_index("0800000")
+idx = z7string_to_index("0000000")
 digits = get_digits(idx)
 res = get_resolution(idx)
 all(digits[1:res] .== 0x00)   # true → pentagon
@@ -191,9 +191,9 @@ from dggrid4py import igeo7
 parent, digit, is_center = igeo7.get_z7hex_local_pos("0042aad3ffffffff")
 
 # From Z7 string
-parent, digit, is_center = igeo7.get_z7string_local_pos("0800433")
-print(parent)     # "080043"
-print(digit)      # "3"
+parent, digit, is_center = igeo7.get_z7string_local_pos("0001022")
+print(parent)     # "000102"
+print(digit)      # "2"
 print(is_center)  # False
 ```
 
@@ -201,8 +201,8 @@ print(is_center)  # False
 
 ```julia
 using IGEO7
-z7_str = index_to_z7string(z7string_to_index("0800433"))
-parent   = z7_str[1:end-1]          # "080043"
-digit    = z7_str[end]              # '3'
+z7_str = index_to_z7string(z7string_to_index("0001022"))
+parent   = z7_str[1:end-1]          # "000102"
+digit    = z7_str[end]              # '2'
 is_center = digit == '0'
 ```

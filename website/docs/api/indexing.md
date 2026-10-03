@@ -26,41 +26,44 @@ latLngToCell(lat, lng, resolution) → cell_id
 
 ### Python — dggrid4py
 
-For a single point or a batch via GeoDataFrame:
+For a single point or a batch via GeoDataFrame, with `dggrid`, `IGEO7_META` and the `auxlat` functions from the [API Overview](./overview#initialising-dggridv8):
 
 ```python
-import geopandas as gpd
-from dggrid4py import DGGRIDv7
-
-dggrid = DGGRIDv7(executable="/usr/local/bin/dggrid", working_dir="/tmp")
-
 # Single point: Tartu, Estonia
 points = gpd.GeoDataFrame(
-    geometry=gpd.points_from_xy([26.722], [58.378]),
+    geometry=gpd.points_from_xy([26.7220], [58.3776]),
     crs=4326,
 )
 
+# WGS84 → authalic sphere; despite the parameter name, DGGRID expects authalic latitudes here
+points_authalic = gpd.GeoDataFrame(geometry=geoseries_to_authalic(points.geometry), crs=4326)
+
 result = dggrid.cells_for_geo_points(
-    geodf_points_wgs84=points,
+    geodf_points_wgs84=points_authalic,
     cell_ids_only=True,
     dggs_type="IGEO7",
     resolution=9,
+    **IGEO7_META,
 )
-print(result["name"].iloc[0])   # Z7 hex string
+print(result["name"].iloc[0])   # Z7 string: 00010224545
 ```
 
-For Z7 string output, transform the result with `igeo7.z7hex_to_z7string`.
+For Z7 hex output, set `"output_hier_ndx_form": "INT64"` in the configuration (here: `004252cbffffffff`).
 
 **Batch indexing** with a large GeoDataFrame works identically — pass all points at once:
 
 ```python
-gdf_cities = gpd.read_file("cities.gpkg")
+gdf_cities = gpd.read_file("cities.gpkg").to_crs(4326)
+cities_authalic = gpd.GeoDataFrame(geometry=geoseries_to_authalic(gdf_cities.geometry), crs=4326)
+
 indexed = dggrid.cells_for_geo_points(
-    geodf_points_wgs84=gdf_cities,
+    geodf_points_wgs84=cities_authalic,
     cell_ids_only=True,
     dggs_type="IGEO7",
     resolution=9,
+    **IGEO7_META,
 )
+gdf_cities["name"] = indexed["name"].values
 ```
 
 ### Julia — IGEO7.jl
@@ -80,34 +83,33 @@ cellToLatLng(cell_id) → (lat, lng)
 ### Python — dggrid4py
 
 ```python
-# Get centroids for a list of cell IDs
-import pandas as pd
+# Get centroids for a list of cell IDs (all of the same resolution)
+cell_ids = ["0001250", "0001254", "0001240"]
 
-cell_ids = ["0800433", "0800434", "0800435"]
-
-gdf_centroids = dggrid.grid_cell_centroids_for_extent(
+gdf_centroids = dggrid.grid_cell_centroids_from_cellids(
+    cell_id_list=cell_ids,
     dggs_type="IGEO7",
     resolution=5,
-    clip_geom=None,   # global
+    **IGEO7_META,
 )
-# Filter to your cells
-mask = gdf_centroids["global_id"].isin(cell_ids)
-print(gdf_centroids[mask][["global_id", "geometry"]])
+# authalic sphere → WGS84
+gdf_centroids["geometry"] = geoseries_to_geodetic(gdf_centroids.geometry)
+gdf_centroids["lat"] = gdf_centroids.geometry.y
+gdf_centroids["lng"] = gdf_centroids.geometry.x
+print(gdf_centroids[["name", "lat", "lng"]])
 ```
 
-Alternatively, generate the full cell polygon and take its centroid:
+To get the full cell polygons instead:
 
 ```python
 gdf_cells = dggrid.grid_cell_polygons_from_cellids(
     cell_id_list=cell_ids,
     dggs_type="IGEO7",
     resolution=5,
-    input_address_type="Z7_STRING",
+    **IGEO7_META,
 )
-gdf_cells["centroid"] = gdf_cells.geometry.centroid
-gdf_cells["lat"] = gdf_cells["centroid"].y
-gdf_cells["lng"] = gdf_cells["centroid"].x
-print(gdf_cells[["global_id", "lat", "lng"]])
+gdf_cells["geometry"] = geoseries_to_geodetic(gdf_cells.geometry)
+print(gdf_cells[["name", "geometry"]])
 ```
 
 ---
@@ -122,7 +124,7 @@ These functions convert between the three Z7 representations without any DGGRID 
 from dggrid4py import igeo7
 
 # Hex ↔ Z7 string
-z7_str = igeo7.z7hex_to_z7string("0042aad3ffffffff")   # "090625251"
+z7_str = igeo7.z7hex_to_z7string("0042aad3ffffffff")   # "00010252551"
 z7_int = igeo7.z7hex_to_z7int("0042aad3ffffffff")      # integer
 z7_hex = igeo7.z7int_to_z7hex(z7_int)                  # back to hex string
 ```
@@ -132,8 +134,8 @@ z7_hex = igeo7.z7int_to_z7hex(z7_int)                  # back to hex string
 ```julia
 using IGEO7
 
-idx    = z7string_to_index("0800433")         # Z7IndexUInt64
-str    = index_to_z7string(idx)               # "0800433"
+idx    = z7string_to_index("0001022")         # Z7IndexUInt64
+str    = index_to_z7string(idx)               # "0001022"
 hex    = z7int_to_z7hex(idx.raw)              # hex string
 int_val = z7hex_to_z7int("0042aad3ffffffff")  # UInt64
 ```

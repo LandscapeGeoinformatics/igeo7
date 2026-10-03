@@ -30,19 +30,19 @@ Because resolution is encoded in the Z7 string as its length, the parent is simp
 ```python
 from dggrid4py import igeo7
 
-z7_str = "0800433"              # resolution 5
+z7_str = "0001022"              # resolution 5
 
 # Parent at resolution 4
-parent_r4 = z7_str[:-1]         # "080043"
+parent_r4 = z7_str[:-1]         # "000102"
 
 # Parent at resolution 2
-parent_r2 = z7_str[:4]          # "0800"  (2 base chars + 2 digits)
+parent_r2 = z7_str[:4]          # "0001"  (2 base chars + 2 digits)
 
 # Helper function for arbitrary target resolution
 def cell_to_parent(z7_str: str, resolution: int) -> str:
     return z7_str[:2 + resolution]
 
-print(cell_to_parent("0800433", 3))   # "08004"
+print(cell_to_parent("0001022", 3))   # "00010"
 ```
 
 ### Julia
@@ -50,15 +50,15 @@ print(cell_to_parent("0800433", 3))   # "08004"
 ```julia
 using IGEO7
 
-idx = z7string_to_index("0800433")
+idx = z7string_to_index("0001022")
 
 # Default: parent at res - 1
 parent = get_parent(idx)
-index_to_z7string(parent)          # "080043"
+index_to_z7string(parent)          # "000102"
 
 # Explicit target resolution
 parent_r2 = get_parent(idx, 2)
-index_to_z7string(parent_r2)       # "0800"
+index_to_z7string(parent_r2)       # "0001"
 ```
 
 ---
@@ -83,32 +83,39 @@ Because children are formed by appending digits 0–6, this is pure string manip
 ### Python
 
 ```python
-z7_str = "0800433"   # resolution 5
+z7_str = "0001022"   # resolution 5
 
 # Direct children at resolution 6
 children = [z7_str + str(d) for d in range(7)]
-# ["08004330", "08004331", "08004332",
-#  "08004333", "08004334", "08004335", "08004336"]
+# ["00010220", "00010221", "00010222",
+#  "00010223", "00010224", "00010225", "00010226"]
 
-# Children at an arbitrary deeper resolution via dggrid4py
-children_gdf = dggrid.grid_cell_polygons_from_cellids(
+# Cells at a deeper resolution inside the parent, with geometry, via dggrid4py
+# (dggrid, IGEO7_META and geoseries_to_geodetic as in the API Overview)
+cells_gdf = dggrid.grid_cell_polygons_from_cellids(
     cell_id_list=[z7_str],
     dggs_type="IGEO7",
-    resolution=8,                    # 3 levels deeper → 7³ = 343 cells
+    resolution=6,
     clip_subset_type="COARSE_CELLS",
     clip_cell_res=5,
-    input_address_type="Z7_STRING",
-    output_address_type="Z7_STRING",
+    **IGEO7_META,
 )
-print(len(children_gdf))   # 343
+cells_gdf["geometry"] = geoseries_to_geodetic(cells_gdf.geometry)
+
+# COARSE_CELLS is a spatial clip to the parent cell, so it also returns
+# neighbouring cells that overlap it. Keep the index children by prefix:
+children_gdf = cells_gdf[cells_gdf["name"].str.startswith(z7_str)]
+print(len(children_gdf))   # 7
 ```
+
+Over several levels the spatial clip and the index hierarchy drift apart, because the descendants of a cell do not exactly fill its hexagon. For the complete set of index descendants, enumerate the digit strings and request their geometry with `grid_cell_polygons_from_cellids`.
 
 ### Julia
 
 ```julia
 using IGEO7
 
-idx = z7string_to_index("0800433")  # res 5
+idx = z7string_to_index("0001022")  # res 5
 res = get_resolution(idx)            # 5
 
 # Direct children: append each digit 0–6
@@ -137,8 +144,8 @@ def cell_to_children_size(z7_str: str, child_resolution: int) -> int:
         return 0
     return 7 ** delta  # exact for hexagons; pentagons slightly fewer
 
-print(cell_to_children_size("0800433", 7))   # 7^2 = 49
-print(cell_to_children_size("0800433", 8))   # 7^3 = 343
+print(cell_to_children_size("0001022", 7))   # 7^2 = 49
+print(cell_to_children_size("0001022", 8))   # 7^3 = 343
 ```
 
 ---
@@ -159,23 +166,23 @@ Currently implemented via geometry intersection in dggrid4py (load cell polygons
 from dggrid4py import igeo7
 
 # Precompute the spatial index once
-gdf = dggrid.grid_cell_polygons_for_extent("IGEO7", resolution=9, ...)
+gdf = dggrid.grid_cell_polygons_for_extent("IGEO7", resolution=9, ..., **IGEO7_META)
 sindex = gdf.sindex.query(gdf.geometry, predicate="intersects")
 
 neighbours_of_a = igeo7.get_neighbours_by_z7(
-    z7_idx="090264253",
+    z7_idx="00010224545",
     gdf=gdf,
     gpd_sindex=sindex,
-    z7_col="global_id",
+    z7_col="name",
 )
-print("090264254" in neighbours_of_a)
+print("00010224540" in neighbours_of_a)   # True
 ```
 
 ### Julia — Z7 arithmetic
 
 ```julia
 using IGEO7
-idx = z7string_to_index("0800433")
+idx = z7string_to_index("0001022")
 neighbours = get_neighbours(idx)   # Vector of Z7IndexUInt64 (6 entries, invalid ones = typemax)
 ```
 

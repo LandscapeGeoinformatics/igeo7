@@ -29,7 +29,7 @@ A **human-readable** representation that directly shows the hierarchy:
 
 ```
 Format:  BB D₁ D₂ D₃ ... Dᵣ
-Example: 08 0 0 4 3 3  →  "0800433"
+Example: 00 0 1 0 2 2  →  "0001022"
 ```
 
 - **2 decimal digits** for the base cell (`00`–`11`)
@@ -44,7 +44,7 @@ The resolution is immediately readable from the string length: `len(z7_string) -
 |---|:---:|:---:|---|---|
 | `"00"` | 0 | 0 | — | Base cell 0 (a pentagon at res 0) |
 | `"050"` | 5 | 1 | [0] | Centre child of base cell 5 |
-| `"0800433"` | 8 | 5 | [0,0,4,3,3] | Cell at res 5 near base cell 8 |
+| `"0001022"` | 0 | 5 | [0,1,0,2,2] | Cell at res 5 containing Tartu, Estonia |
 | `"0042aad3..."` | — | — | — | This is hex format, not Z7 string |
 
 ## Conversions
@@ -57,7 +57,7 @@ from dggrid4py import igeo7
 # Hex → Z7 string
 z7_hex = "0042aad3ffffffff"
 z7_str = igeo7.z7hex_to_z7string(z7_hex)
-print(z7_str)          # "090625251"
+print(z7_str)          # "00010252551"
 
 # Z7 string → integer
 z7_int = igeo7.z7hex_to_z7int(z7_hex)
@@ -73,7 +73,7 @@ print(res)             # 9
 
 # Parent and local position (from hex)
 parent, local_pos, is_center = igeo7.get_z7hex_local_pos(z7_hex)
-print(parent)          # "09062525"  (one digit shorter)
+print(parent)          # "0001025255"  (one digit shorter)
 print(local_pos)       # "1"
 print(is_center)       # False
 
@@ -86,11 +86,11 @@ parent, local_pos, is_center = igeo7.get_z7string_local_pos(z7_str)
 ```julia
 using IGEO7
 
-idx = z7string_to_index("0800433")
-println(index_to_z7string(idx))   # "0800433"
+idx = z7string_to_index("0001022")
+println(index_to_z7string(idx))   # "0001022"
 
 # Hex ↔ Z7 string
-z7_str = z7hex_to_z7string("0042aad3ffffffff")  # "090625251"
+z7_str = z7hex_to_z7string("0042aad3ffffffff")  # "00010252551"
 hex = z7int_to_z7hex(z7hex_to_z7int("0042aad3ffffffff"))
 ```
 
@@ -99,21 +99,21 @@ hex = z7int_to_z7hex(z7hex_to_z7int("0042aad3ffffffff"))
 One of the most useful properties of the Z7 string format: **the parent is simply a prefix**.
 
 ```python
-z7_str = "0800433"
+z7_str = "0001022"
 
 # Parent (resolution 4): truncate last digit
-parent_r4 = z7_str[:-1]     # "080043"
+parent_r4 = z7_str[:-1]     # "000102"
 
 # Parent (resolution 3): truncate two digits
-parent_r3 = z7_str[:-2]     # "08004"
+parent_r3 = z7_str[:-2]     # "00010"
 
 # All children (resolution 6): append each digit 0–6
 children = [z7_str + str(d) for d in range(7)]
-# ["08004330", "08004331", ..., "08004336"]
+# ["00010220", "00010221", ..., "00010226"]
 ```
 
 :::tip DGGRID address type
-When using dggrid4py, pass `output_address_type="Z7_STRING"` to get Z7 string indexes, or `output_address_type="Z7"` to get the hex format.
+When using dggrid4py with `DGGRIDv8`, pass `output_address_type="HIERNDX"` and `output_hier_ndx_system="Z7"`, with `output_hier_ndx_form="DIGIT_STRING"` to get Z7 string indexes or `output_hier_ndx_form="INT64"` to get the hex format. See [dggrid4py](../ecosystem/dggrid4py#setup). The older `"Z7_STRING"` / `"Z7"` address types belong to `DGGRIDv7`; they are marked deprecated in DGGRID 8.44 and dropped in DGGRID 9.
 :::
 
 ## Digit Values 0–6: Local Position
@@ -130,7 +130,7 @@ The centre child (`digit=0`) at any resolution is the cell that contains the par
 ## Storage Tips
 
 - **Database:** Store as `VARCHAR(22)` for Z7 string, or `BIGINT UNSIGNED` / `INT8` for the integer representation.
-- **Indexing:** The Z7 string's prefix property makes hierarchical queries efficient with a standard B-tree index (`WHERE z7 LIKE '08004%'` returns all descendants of cell `08004`).
+- **Indexing:** The Z7 string's prefix property makes hierarchical queries efficient with a standard B-tree index (`WHERE z7 LIKE '00010%'` returns all descendants of cell `00010`).
 - **Parquet / Arrow:** Use `uint64` for the integer, `utf8` for the string column.
 
 ## See Also

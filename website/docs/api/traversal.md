@@ -25,19 +25,23 @@ For practical use, neighbour lookup via spatial index on a pre-generated grid is
 ```python
 from dggrid4py import igeo7
 
-# Pre-generate grid for your area of interest
+# Pre-generate grid for your area of interest (a shapely geometry in WGS84)
+# dggrid, IGEO7_META and the auxlat functions as in the API Overview
+my_area_authalic = geoseries_to_authalic(gpd.GeoSeries([my_area], crs=4326)).iloc[0]
+
 gdf = dggrid.grid_cell_polygons_for_extent(
-    "IGEO7", resolution=9, clip_geom=my_area,
-    output_address_type="Z7_STRING",
+    "IGEO7", resolution=9, clip_geom=my_area_authalic,
+    **IGEO7_META,
 )
+gdf["geometry"] = geoseries_to_geodetic(gdf.geometry)
 sindex = gdf.sindex.query(gdf.geometry, predicate="intersects")
 
 # Get neighbours of a specific cell
 neighbours = igeo7.get_neighbours_by_z7(
-    z7_idx="090264253",
+    z7_idx="00010224545",
     gdf=gdf,
     gpd_sindex=sindex,
-    z7_col="global_id",
+    z7_col="name",
 )
 print(neighbours)
 ```
@@ -49,7 +53,7 @@ print(neighbours)
 ```julia
 using IGEO7
 
-idx = z7string_to_index("0800433")
+idx = z7string_to_index("0001022")
 neighbours = get_neighbours(idx)
 # Returns Vector{Z7IndexUInt64} with 6 entries
 # Entries equal to typemax(UInt64) are invalid (pentagon exclusion)

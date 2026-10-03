@@ -57,10 +57,9 @@ const DEFAULT_POINTS = [
 //   Authalic conversion: pinned from resolution 5. Feeding raw geodetic
 //   latitude instead gives 0064154 there, not 0064156.
 //
-//   Orientation 11.2: resolutions 0 to 5 are IDENTICAL under 11.2 and under
-//   DGGRID's default 11.25, so the lab's res-5 anchor alone cannot tell the two
-//   apart. The first divergence is at resolution 6, where 11.25 gives 00641542
-//   instead of 00641565. The res >= 6 rows are what actually discriminate it.
+//   Orientation 11.2: the lab's res-5 anchor alone does not pin it, because
+//   that one value is the same under DGGRID's default 11.25. The res >= 6 rows
+//   are what discriminate it (11.25 gives 00641542 at resolution 6).
 const LISBON_EXPECTED = {
   0: "00",
   1: "006",

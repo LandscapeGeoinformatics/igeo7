@@ -91,16 +91,16 @@ IGEO7 has 5 more resolution levels than H3 because it starts from a pure icosahe
 ## Generate the stats with dggrid4py
 
 ```python
-from dggrid4py import DGGRIDv7
+from dggrid4py import DGGRIDv8
 import os
 
-dggrid = DGGRIDv7(
+dggrid = DGGRIDv8(
     executable=os.environ.get("DGGRID_PATH", "/usr/local/bin/dggrid"),
     working_dir="/tmp",
     silent=True,
 )
 
-# yes, ISEA7H, IGEO7 is not recognized as a grid for resolutions in itself :-)
+# ISEA7H has the same cells as IGEO7; older DGGRID builds (8.42) fail on stats with the IGEO7 preset
 df = dggrid.grid_stats_table("ISEA7H", 20)
 print(df.to_string())
 ```

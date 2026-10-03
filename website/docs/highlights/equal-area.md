@@ -52,7 +52,7 @@ See [ISEA Projection](../concepts/isea-projection) for the mathematical details.
 
 ## The Trade-off
 
-Equal area comes with one practical cost: DGGRID uses authalic latitudes internally, requiring a geodetic↔authalic coordinate conversion when converting between WGS84 lat/lng and Z7 cell IDs. This makes DGGRID-based conversion slightly slower than H3's gnomonic approach.
+Equal area comes with one practical cost: DGGRID works on an authalic sphere, requiring a geodetic↔authalic coordinate conversion when converting between WGS84 lat/lng and Z7 cell IDs. The DGGRID tool does not apply this conversion yet, so with dggrid4py it is still done explicitly (`dggrid4py.auxlat`); DGGRID v9, already in beta, will have an option for it. This makes DGGRID-based conversion slightly slower than H3's gnomonic approach.
 
 For most use cases this is imperceptible. For very high-throughput point-in-cell lookups, DGGAL (`pip install dggal`) implements IGEO7 natively in C++ and is very fast.
 

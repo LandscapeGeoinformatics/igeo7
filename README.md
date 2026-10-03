@@ -70,9 +70,7 @@ website/src/components/Z7Explorer/igeo7-config.mjs   ->   ORIENTATION_LON
 ```
 
 The explorer and both harnesses import from that file, so there is no second
-copy to keep in step. Be aware that 11.2 and 11.25 give **identical** results
-through resolution 5 and first diverge at resolution 6, so a resolution-5 test
-point cannot tell them apart.
+copy to keep in step.
 
 **2. Authalic latitude conversion**, which is mandatory and is *not* part of the
 config object, because webDggrid does not apply it for you. It is a round trip
