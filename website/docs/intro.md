@@ -20,7 +20,10 @@ A **Discrete Global Grid System** partitions the entire surface of the Earth int
 
 IGEO7 is implemented in:
 - **DGGRID** (C++) — the original reference implementation of ISEA7H and Z7
-- **DGGAL** — supports IGEO7 via ISEA7H_Z7
+- **[DGGAL](https://dggal.org/)** — supports IGEO7 via ISEA7H_Z7
+- **[DggridRunners.jl](https://github.com/allixender/DggridRunners.jl)** — Julia equivalent of dggrid4py, an executor for DGGRID
+- **[IGEO7.jl](https://github.com/allixender/IGEO7.jl)** — Julia package for Z7 index arithmetic and neighbour traversal (GBT/CPI)
+- **[DiscreteGlobalGrids.jl](https://github.com/JuliaGeo/DiscreteGlobalGrids.jl/)** — Julia package with IGEO7 as one of several grid systems behind a common interface
 - **dggrid4py** — Python wrapper for DGGRID, can take care of correct definitions
 - **pydggsapi** — OGC API DGGS server that supports both dggrid4py and dggal
 

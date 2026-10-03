@@ -168,6 +168,18 @@ const config = {
                 href: "https://dggal.org",
               },
               {
+                label: "DggridRunners.jl",
+                href: "https://github.com/allixender/DggridRunners.jl",
+              },
+              {
+                label: "IGEO7.jl",
+                href: "https://github.com/allixender/IGEO7.jl",
+              },
+              {
+                label: "DiscreteGlobalGrids.jl",
+                href: "https://github.com/JuliaGeo/DiscreteGlobalGrids.jl/",
+              },
+              {
                 label: "GeoPlegma",
                 href: "https://github.com/geoplegma/geoplegma",
               },

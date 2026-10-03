@@ -85,7 +85,7 @@ All are installed automatically.
 
 ## 3. (Optional) DGGAL / pydggal
 
-For a pure-Python alternative with no subprocess calls, [DGGAL](https://github.com/ecere/dggal) implements IGEO7 natively as `ISEA7H_Z7`. Install the Python binding:
+For an alternative with no subprocess calls, [DGGAL](https://dggal.org/) implements IGEO7 natively as `ISEA7H_Z7`. Install the Python binding:
 
 ```bash
 pip install dggal

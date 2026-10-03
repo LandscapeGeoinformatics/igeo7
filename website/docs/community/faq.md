@@ -65,7 +65,7 @@ SELECT * FROM observations WHERE cell_id LIKE '0001022%';
 
 For **coordinate → cell** conversion and **grid generation**, yes — dggrid4py requires the DGGRID binary. For **index arithmetic** (resolution, parent, children, format conversions), the `dggrid4py.igeo7` module is pure Python with no DGGRID dependency.
 
-Alternatively, [DGGAL](https://github.com/ecere/dggal) (`pip install dggal`) implements the full IGEO7 stack natively in C++ with no subprocess overhead.
+Alternatively, [DGGAL](https://dggal.org/) (`pip install dggal`) implements the full IGEO7 stack natively in C++ with no subprocess overhead.
 
 ### Is there a JavaScript / web implementation?
 
