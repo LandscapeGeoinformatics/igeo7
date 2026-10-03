@@ -49,9 +49,9 @@ function basemapStyle(dark) {
       carto: {
         type: "raster",
         tiles: [
-          `https://a.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png`,
-          `https://b.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png`,
-          `https://c.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png`,
+          `https://a.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png?key=cb1_48hv_1_08dca659312fac2979ef7975`,
+          `https://b.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png?key=cb1_48hv_1_08dca659312fac2979ef7975`,
+          `https://c.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}{r}.png?key=cb1_48hv_1_08dca659312fac2979ef7975`,
         ],
         tileSize: 256,
         attribution:
