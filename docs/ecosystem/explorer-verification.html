@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Explorer Verification | IGEO7</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://igeo7.org/images/social-card.png"><meta data-rh="true" name="twitter:image" content="https://igeo7.org/images/social-card.png"><meta data-rh="true" property="og:url" content="https://igeo7.org/docs/ecosystem/explorer-verification"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Explorer Verification | IGEO7"><meta data-rh="true" name="description" content="These are the IGEO7 conformance notes for the Explore page. They"><meta data-rh="true" property="og:description" content="These are the IGEO7 conformance notes for the Explore page. They"><link data-rh="true" rel="icon" href="/images/favicon.ico"><link data-rh="true" rel="canonical" href="https://igeo7.org/docs/ecosystem/explorer-verification"><link data-rh="true" rel="alternate" href="https://igeo7.org/docs/ecosystem/explorer-verification" hreflang="en"><link data-rh="true" rel="alternate" href="https://igeo7.org/docs/ecosystem/explorer-verification" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Explorer Verification","item":"https://igeo7.org/docs/ecosystem/explorer-verification"}]}</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css" integrity="sha384-Xi8rHCmBmhbuyyhbI88391ZKP2dmfnOl4rT9ZfRI7mLTdk1wblIUnrIq35nqwEvC" crossorigin="anonymous"><link rel="stylesheet" href="/assets/css/styles.34392a7b.css">
-<script src="/assets/js/runtime~main.d63a29c2.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.0d9c5572.js" defer="defer"></script>
 <script src="/assets/js/main.ca684dff.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -51,14 +51,10 @@ implementation.</p>
 value certifies.</p>
 <p>The reference index <code>0064156</code> at resolution 5 <strong>does</strong> prove the authalic
 conversion is applied: feeding raw geodetic latitude instead yields <code>0064154</code>.</p>
-<p>It does <strong>not</strong> prove the 11.2 orientation. Resolutions 0 to 5 are identical
-under 11.2 and under DGGRID&#x27;s default 11.25. The two first diverge at
-resolution 6:</p>
-<table><thead><tr><th>Orientation</th><th>Resolution 5</th><th>Resolution 6</th></tr></thead><tbody><tr><td>11.2 (IGEO7)</td><td><code>0064156</code></td><td><code>00641565</code></td></tr><tr><td>11.25 (DGGRID default)</td><td><code>0064156</code></td><td><code>00641542</code></td></tr></tbody></table>
-<p>So the orientation is only pinned by the resolution 6 and deeper rows, which is
-why the expected table runs to resolution 10 rather than stopping at the anchor.
-Any additional test points intended to confirm the orientation need to be at
-resolution 6 or deeper to be meaningful.</p>
+<p>On its own it does <strong>not</strong> pin the 11.2 orientation: that single anchor value
+is the same with DGGRID&#x27;s default orientation. The orientation is pinned by the
+finer rows of the expected table, which is why the table runs to resolution 10
+rather than stopping at the anchor.</p>
 <p>Both assertions were confirmed by mutation testing: setting the orientation to
 11.25, or removing the authalic conversions, each makes the harness fail. An
 earlier version of the harness passed under both mutations, which is what
