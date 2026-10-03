@@ -11,6 +11,9 @@ Besides DGGRID and dggrid4py, these libraries support IGEO7.
 | Tool | Language | Role |
 |---|---|---|
 | [DGGAL](#dggal) | C, with bindings | Native DGGS library; IGEO7 as `ISEA7H_Z7` |
+| [py4dggs](#py4dggs) | Python | Pure-Python DGGS reference library, designed after DGGAL |
+| [webDggrid](#webdggrid) | JavaScript (WebAssembly) | DGGRID for the browser and Node.js; the engine of the explorer on this site |
+| [duck_dggs](#duck_dggs) | SQL (DuckDB) | DuckDB extension with DGGRID functions and Z7 arithmetic |
 | [DggridRunners.jl](#dggridrunnersjl) | Julia | Runs DGGRID, the Julia equivalent of dggrid4py |
 | [IGEO7.jl](#igeo7jl) | Julia | Z7 index arithmetic and neighbour traversal |
 | [DiscreteGlobalGrids.jl](#discreteglobalgridsjl) | Julia | Several grid systems, IGEO7 among them, behind one interface |
@@ -23,6 +26,31 @@ Besides DGGRID and dggrid4py, these libraries support IGEO7.
 - **Repository:** https://github.com/ecere/dggal
 - **Bindings:** C, C++, Python (`pip install dggal`), Rust, Java, JavaScript (WebAssembly)
 - **License:** BSD-3-Clause
+
+## py4dggs
+
+**[py4dggs](https://github.com/terraops-org/py4dggs)** is a pure-Python, multi-grid DGGS reference library with zero runtime dependencies. It is designed after DGGAL and verified against DGGAL's Python binding. IGEO7 with Z7 digit IDs is one of its grids, next to other aperture-7 and aperture-3 hexagonal grids.
+
+- **Repository:** https://github.com/terraops-org/py4dggs
+- **Install:** `pip install py4dggs` (Python 3.12 or later)
+- **License:** MIT
+
+## webDggrid
+
+**[webDggrid](https://am2222.github.io/webDggrid/)** is DGGRID compiled to WebAssembly, for the browser and Node.js. It converts coordinates to cells and back, exports grids as GeoJSON, and has bit-level operations on the 64-bit Z7 index (parent, neighbours, encode and decode). It is the engine behind the [Interactive Explorer](./explorer) on this site. As with DGGRID itself, the IGEO7 orientation and the authalic conversion have to be set explicitly, which the explorer page describes.
+
+- **Website:** https://am2222.github.io/webDggrid/
+- **Repository:** https://github.com/am2222/webDggrid
+- **Install:** `npm install webdggrid`
+
+## duck_dggs
+
+**[duck_dggs](https://duckdb.org/community_extensions/extensions/duck_dggs)** is a DuckDB community extension powered by DGGRID v8. It brings DGGRID's coordinate, cell and hierarchy functions into SQL, together with Z7 arithmetic on the packed index (`igeo7_parent`, `igeo7_get_neighbours`, `igeo7_to_string` and others) and the authalic conversion (`igeo7_geo_to_authalic`, `igeo7_authalic_to_geo`). Its default grid is ISEA4H, so the IGEO7 grid is selected through `dggs_params`.
+
+- **Extension page:** https://duckdb.org/community_extensions/extensions/duck_dggs
+- **Repository:** https://github.com/am2222/duckdb-dggs
+- **Install:** `INSTALL duck_dggs FROM community; LOAD duck_dggs;`
+- **License:** MIT
 
 ## DggridRunners.jl
 
