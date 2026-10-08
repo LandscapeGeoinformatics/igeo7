@@ -8,10 +8,16 @@ title: pydggsapi
 
 **pydggsapi** is an OGC API – DGGS server implementation built with FastAPI, with IGEO7 as a natively supported Discrete Global Grid Reference System.
 
-- **Repository:** https://github.com/allixender/pydggsapi
-- **Authors:** Alexander Kmoch, Wai Tik Chan (University of Tartu)
+- **Repository:** https://github.com/LandscapeGeoinformatics/pydggsapi
+- **Authors:** 
+   - Alexander Kmoch (University of Tartu)
+   - Wai Tik Chan (University of Tartu)
+   - Francis Charette-Migneault (Technologies Luqia, CRIM)
 - **License:** AGPL-3.0
-- **Paper:** Kmoch, A., Chan, W.T. (2025). pydggsapi. FOSS4G 2025.
+- **Related Publications**:
+  - Chan, W. T., Charette-Migneault, F., Uuemaa, E., & Kmoch, A. (2026). pydggsapi: A query web service for Discrete Global Grid System (DGGS) collections. SoftwareX, 103042. [DOI:10.1016/j.softx.2026.103042](https://doi.org/10.1016/j.softx.2026.103042)
+  
+  - Kmoch, A., Chan, W.T. (2025). pydggsapi. FOSS4G 2025 Conference Presentation.
 
 ## What It Does
 
